@@ -5,7 +5,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type Connect struct {
+type ConnectServer struct {
 	Users  UserConnections
 	Logger *zap.SugaredLogger
 	Bus    Bus
