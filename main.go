@@ -43,20 +43,20 @@ func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
 	conn.WriteMessage(websocket.TextMessage, []byte("Connected"))
 }
 
+
 func main() {
 	l, _ := zap.NewDevelopment()
 	logger := l.Sugar()
 
-	
 	c := &ConnectServer{
 		Users:  make(UserConnections),
 		Logger: logger,
 	}
-	
+
 	b := NewChannelBus()
 	b.Register(EventType_NewMessage, newMessageHandler(c))
 	c.Bus = b
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/ws", c.WSHandler)
 
