@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -33,7 +34,10 @@ func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
 			e := &Event{}
 			err = c.ReadJSON(e)
 			if err != nil {
-				s.Logger.Errorf("error in reading event from client: %v", err)
+				//TODO(amirreza): please fix this:))
+				if !strings.Contains(err.Error(), "EOF")  {
+					s.Logger.Errorf("error in reading event from client: %v", err)
+				}
 				continue
 			}
 			e.Creator = nickName
