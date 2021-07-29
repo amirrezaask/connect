@@ -37,12 +37,12 @@ func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			e.Creator = nickName
+			s.Logger.Debugf("received from %s: %+v", nickName, e)
 			s.Bus.Emit(e)
 		}
 	}(conn, nickName)
 	conn.WriteMessage(websocket.TextMessage, []byte("Connected"))
 }
-
 
 func main() {
 	l, _ := zap.NewDevelopment()
@@ -75,7 +75,7 @@ func newMessageHandler(c *ConnectServer) func(e *Event) error {
 				c.Logger.Errorf("error in unmarshaling new message payload: %v", err)
 				return nil
 			}
-			c.Users.Get(p.Receiver).WriteJSON(p)
+			c.Users.Get(p.Receiver).WriteJSON(e)
 		}
 		return nil
 	}

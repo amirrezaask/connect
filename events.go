@@ -1,13 +1,12 @@
 package main
 
-type EventType uint8
+type EventType string
 
 const (
-	_ = iota
-	EventType_NewMessage
-	EventType_FileChunk
-	EventType_Handshake_Request
-	EventType_Handshake_Response
+	EventType_NewMessage         = "new_message"
+	EventType_FileChunk          = "file_chunk"
+	EventType_Handshake_Request  = "handshake_req"
+	EventType_Handshake_Response = "handshake_res"
 )
 
 type Event struct {
@@ -17,7 +16,7 @@ type Event struct {
 }
 
 type NewMessagePayload struct {
-	Sender   string
-	Receiver string
-	Body     string
+	Sender   string `json:"sender"`
+	Receiver string `json:"receiver"`
+	Body     string `json:"body"`
 }

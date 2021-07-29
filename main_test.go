@@ -82,6 +82,7 @@ func TestPerson2PersonMessage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot read salam message: %v", err)
 	}
+	t.Logf("%+v", e)
 	if len(e.Payload) == 0 {
 		t.Fatal("cannot read salam message payload")
 	}
@@ -92,5 +93,5 @@ func TestPerson2PersonMessage(t *testing.T) {
 	}
 	if p.Body != "salam" {
 		t.Fatalf("message is not salam")
-	} 
+	}
 }
