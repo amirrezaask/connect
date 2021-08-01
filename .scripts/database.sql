@@ -14,7 +14,11 @@ CREATE TABLE IF NOT EXISTS hubs (
     name varchar(255),
     creator varchar(255) REFERENCES users(id)
 );
-
+CREATE TABLE IF NOT EXISTS hub_users (
+    user_id varchar(255) REFERENCES users(id),
+    hub_id varchar(255) REFERENCES hubs(id),
+    primary key (user_id, hub_id)
+);
 -- Channels
 CREATE TYPE channel_type_t AS ENUM ('voice', 'text');
 CREATE TABLE IF NOT EXISTS channels (
@@ -22,11 +26,10 @@ CREATE TABLE IF NOT EXISTS channels (
     name varchar(255),
     'type' channel_type_t
 );
-
-CREATE TABLE IF NOT EXISTS hub_users (
+CREATE TABLE IF NOT EXISTS channel_users (
     user_id varchar(255) REFERENCES users(id),
-    hub_id varchar(255) REFERENCES hubs(id),
-    primary key (user_id, hub_id)
+    channel_id varchar(255) REFERENCES channels(id),
+    primary key(user_id, channel_id)
 );
 
 CREATE TABLE IF NOT EXISTS hub_permissions (
@@ -43,9 +46,5 @@ CREATE TABLE IF NOT EXISTS channel_permissions (
     primary key(user_id, channel_id)
 );
 
-CREATE TABLE IF NOT EXISTS channel_users (
-    user_id varchar(255) REFERENCES users(id),
-    channel_id varchar(255) REFERENCES channels(id),
-    primary key(user_id, channel_id)
-);
+
 
