@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS users (
     email varchar(255),
     password_hash varchar(255)
 );
-CREATE INDEX users_username_idx (username);
-CREATE INDEX users_email_idx (email);
+/* CREATE INDEX users_username_idx users(username); */
+/* CREATE INDEX users_email_idx users(email); */
 
 -- Hubs
 CREATE TABLE IF NOT EXISTS hubs (
@@ -20,11 +20,13 @@ CREATE TABLE IF NOT EXISTS hub_users (
     primary key (user_id, hub_id)
 );
 -- Channels
+DROP TYPE IF EXISTS channel_type_t;
 CREATE TYPE channel_type_t AS ENUM ('voice', 'text');
+
 CREATE TABLE IF NOT EXISTS channels (
     id varchar(255) primary key,
     name varchar(255),
-    'type' channel_type_t
+    "type" channel_type_t
 );
 CREATE TABLE IF NOT EXISTS channel_users (
     user_id varchar(255) REFERENCES users(id),
@@ -36,7 +38,7 @@ CREATE TABLE IF NOT EXISTS hub_permissions (
     user_id varchar(255) REFERENCES users(id),
     hub_id varchar(255) REFERENCES hubs(id),
     premission bigint,
-    primary key(user_id, channel_id)
+    primary key(user_id, hub_id)
 );
 
 CREATE TABLE IF NOT EXISTS channel_permissions (

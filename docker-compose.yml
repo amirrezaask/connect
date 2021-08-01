@@ -3,7 +3,9 @@ version: "3.2"
 services:
   psql:
     image: postgres:13.3
+    ports:
+      - "5432:5432"
     environment:
-      - "POSTGRES_PASSWORD=admin"
-      - "POSTGRES_USER=postgres"
+      - "POSTGRES_PASSWORD=connect"
+      - "POSTGRES_USER=connect"
       - "POSTGRES_DB=connect"
