@@ -1,115 +1,66 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
+	"database/sql"
 	"log"
 	"net/http"
 
-	"github.com/amirrezaask/connect/models"
+	"github.com/amirrezaask/connect/bus"
+	"github.com/amirrezaask/connect/domain"
+	"github.com/amirrezaask/connect/handlers"
 	"github.com/labstack/echo/v4"
-	"github.com/volatiletech/sqlboiler/v4/boil"
 
 	"go.uber.org/zap"
 )
 
-func OK(ctx echo.Context, data interface{}) error {
-    return ctx.JSON(http.StatusOK, data)
-}
-
-func (c *ConnectServer) CreateHub(ctx echo.Context) error {
-	h := &models.Hub{}
-	err := ctx.Bind(h)
-	if err != nil {
-		return ctx.String(400, err.Error())
-	}
-	err = h.Insert(context.TODO(), c.DB, boil.Infer())
-	if err != nil {
-		return ctx.String(400, err.Error())
-	}
-    return OK(ctx, h)
-}
-
-func (c *ConnectServer) CreateChannel(ctx echo.Context) error {
-	h := &models.Channel{}
-	err := ctx.Bind(h)
-	if err != nil {
-		return ctx.String(400, err.Error())
-	}
-	err = h.Insert(context.TODO(), c.DB, boil.Infer())
-	if err != nil {
-		return ctx.String(400, err.Error())
-	}
-    return OK(ctx, h)
-}
-
-func (c *ConnectServer) AddUserToHub(ctx echo.Context) error {
-    type HubUser struct {
-        UserID string `json:"user_id"`
-        HubID string `json:"hub_id"`
-    }
-    hu := &HubUser{}
-    err := ctx.Bind(hu)
-    if err != nil {
-		return ctx.String(400, err.Error())
-	}
-    h := models.Hub{ID: hu.HubID}
-    err = h.AddUsers(context.TODO(), c.DB, false)
-    if err != nil {
-		return ctx.String(400, err.Error())
-	}
-    return OK(ctx, hu)
-}
-
-func setupAPIServer(c *ConnectServer) http.Handler {
+func setupAPIServer(db *sql.DB) http.Handler {
 	e := echo.New()
-	e.POST("/hub", c.CreateHub)
-    e.POST("/hub_users", c.AddUserToHub)
-    e.POST("/channel", c.CreateChannel)
+
+	hubHandler := handlers.HubHandler{DB: db}
+	channelHandler := handlers.ChannelHandler{DB: db}
+
+	e.POST("/hub", hubHandler.CreateHub)
+	e.POST("/hub_users", hubHandler.AddUserToHub)
+	e.POST("/channel", channelHandler.CreateChannel)
+
 	return e.Server.Handler
 }
 
-func setupWSServer(c *ConnectServer) http.Handler {
+func setupWSServer(h *handlers.WSHandler) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", c.WSHandler)
+
+	mux.HandleFunc("/", h.WSHandler)
 	return mux
 }
 
-func main() {
+func regiterServers() {
 	l, _ := zap.NewDevelopment()
 	logger := l.Sugar()
 
-	c := &ConnectServer{
-		Users:  make(UserConnections),
+	b := bus.NewChannelBus()
+	uc := handlers.UserConnections{}
+
+	// FIX
+	db := &sql.DB{}
+	WSHandler := &handlers.WSHandler{
+		Users:  uc,
 		Logger: logger,
+		Bus:    b,
+		DB:     db,
 	}
 
-	b := NewChannelBus()
-	b.Register(EventType_NewMessage, newMessageHandler(c))
-	c.Bus = b
+	WSServer := setupWSServer(WSHandler)
+	apiServer := setupAPIServer(db)
 
-	WSServer := setupWSServer(c)
-	apiServer := setupAPIServer(c)
-
+	b.Register(domain.EventType_NewMessage, WSHandler.NewMessageEventHandler())
 	http.Handle("/ws", WSServer)
 	http.Handle("/api", apiServer)
+}
+
+func main() {
+	regiterServers()
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("%s", err)
-	}
-}
-
-func newMessageHandler(c *ConnectServer) func(e *Event) error {
-	return func(e *Event) error {
-		if e.EventType == EventType_NewMessage {
-			p := &NewMessagePayload{}
-			err := json.Unmarshal(e.Payload, p)
-			if err != nil {
-				c.Logger.Errorf("error in unmarshaling new message payload: %v", err)
-				return nil
-			}
-			c.Users.Get(p.Receiver).WriteJSON(e)
-		}
-		return nil
 	}
 }

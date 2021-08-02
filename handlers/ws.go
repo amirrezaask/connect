@@ -1,10 +1,15 @@
-package main
+package handlers
 
 import (
+	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strings"
 
+	"github.com/amirrezaask/connect/bus"
+	"github.com/amirrezaask/connect/domain"
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 var upgrader = websocket.Upgrader{
@@ -13,7 +18,24 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
+type WSHandler struct {
+	Users  UserConnections
+	Logger *zap.SugaredLogger
+	Bus    bus.Bus
+	DB     *sql.DB
+}
+
+type UserConnections map[string]*websocket.Conn
+
+func (uc UserConnections) Add(nickname string, conn *websocket.Conn) {
+	uc[nickname] = conn
+}
+
+func (uc UserConnections) Get(nickName string) *websocket.Conn {
+	return uc[nickName]
+}
+
+func (s *WSHandler) WSHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.Logger.Errorf("error in upgrading user connection to ws protocol: %v", err)
@@ -28,7 +50,7 @@ func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
 	s.Users.Add(nickName, conn)
 	go func(c *websocket.Conn, nickName string) {
 		for {
-			e := &Event{}
+			e := &domain.Event{}
 			err = c.ReadJSON(e)
 			if err != nil {
 				//TODO(amirreza): please fix this:))
@@ -43,4 +65,19 @@ func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}(conn, nickName)
 	conn.WriteMessage(websocket.TextMessage, []byte("Connected"))
+}
+
+func (c *WSHandler) NewMessageEventHandler() func(e *domain.Event) error {
+	return func(e *domain.Event) error {
+		if e.EventType == domain.EventType_NewMessage {
+			p := &domain.NewMessagePayload{}
+			err := json.Unmarshal(e.Payload, p)
+			if err != nil {
+				c.Logger.Errorf("error in unmarshaling new message payload: %v", err)
+				return nil
+			}
+			c.Users.Get(p.Receiver).WriteJSON(e)
+		}
+		return nil
+	}
 }
