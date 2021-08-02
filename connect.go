@@ -1,6 +1,8 @@
 package main
 
 import (
+	"database/sql"
+
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
@@ -9,9 +11,8 @@ type ConnectServer struct {
 	Users  UserConnections
 	Logger *zap.SugaredLogger
 	Bus    Bus
+	DB     *sql.DB
 }
-
-
 
 type UserConnections map[string]*websocket.Conn
 

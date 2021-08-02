@@ -1,51 +1,78 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/gorilla/websocket"
+	"github.com/amirrezaask/connect/models"
+	"github.com/labstack/echo/v4"
+	"github.com/volatiletech/sqlboiler/v4/boil"
+
 	"go.uber.org/zap"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+func OK(ctx echo.Context, data interface{}) error {
+    return ctx.JSON(http.StatusOK, data)
 }
 
-func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+func (c *ConnectServer) CreateHub(ctx echo.Context) error {
+	h := &models.Hub{}
+	err := ctx.Bind(h)
 	if err != nil {
-		s.Logger.Errorf("error in upgrading user connection to ws protocol: %v", err)
-		return
+		return ctx.String(400, err.Error())
 	}
-	nickName := r.URL.Query().Get("nickname")
-	if nickName == "" {
-		s.Logger.Error("user has not send a nickname")
-		return
+	err = h.Insert(context.TODO(), c.DB, boil.Infer())
+	if err != nil {
+		return ctx.String(400, err.Error())
 	}
-	s.Logger.Debugf("%s connected", nickName)
-	s.Users.Add(nickName, conn)
-	go func(c *websocket.Conn, nickName string) {
-		for {
-			e := &Event{}
-			err = c.ReadJSON(e)
-			if err != nil {
-				//TODO(amirreza): please fix this:))
-				if !strings.Contains(err.Error(), "EOF")  {
-					s.Logger.Errorf("error in reading event from client: %v", err)
-				}
-				continue
-			}
-			e.Creator = nickName
-			s.Logger.Debugf("received from %s: %+v", nickName, e)
-			s.Bus.Emit(e)
-		}
-	}(conn, nickName)
-	conn.WriteMessage(websocket.TextMessage, []byte("Connected"))
+    return OK(ctx, h)
+}
+
+func (c *ConnectServer) CreateChannel(ctx echo.Context) error {
+	h := &models.Channel{}
+	err := ctx.Bind(h)
+	if err != nil {
+		return ctx.String(400, err.Error())
+	}
+	err = h.Insert(context.TODO(), c.DB, boil.Infer())
+	if err != nil {
+		return ctx.String(400, err.Error())
+	}
+    return OK(ctx, h)
+}
+
+func (c *ConnectServer) AddUserToHub(ctx echo.Context) error {
+    type HubUser struct {
+        UserID string `json:"user_id"`
+        HubID string `json:"hub_id"`
+    }
+    hu := &HubUser{}
+    err := ctx.Bind(hu)
+    if err != nil {
+		return ctx.String(400, err.Error())
+	}
+    h := models.Hub{ID: hu.HubID}
+    err = h.AddUsers(context.TODO(), c.DB, false)
+    if err != nil {
+		return ctx.String(400, err.Error())
+	}
+    return OK(ctx, hu)
+}
+
+func setupAPIServer(c *ConnectServer) http.Handler {
+	e := echo.New()
+	e.POST("/hub", c.CreateHub)
+    e.POST("/hub_users", c.AddUserToHub)
+    e.POST("/channel", c.CreateChannel)
+	return e.Server.Handler
+}
+
+func setupWSServer(c *ConnectServer) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", c.WSHandler)
+	return mux
 }
 
 func main() {
@@ -61,10 +88,12 @@ func main() {
 	b.Register(EventType_NewMessage, newMessageHandler(c))
 	c.Bus = b
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/ws", c.WSHandler)
+	WSServer := setupWSServer(c)
+	apiServer := setupAPIServer(c)
 
-	err := http.ListenAndServe(":8080", mux)
+	http.Handle("/ws", WSServer)
+	http.Handle("/api", apiServer)
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatalf("%s", err)
 	}

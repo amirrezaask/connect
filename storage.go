@@ -1,5 +1,5 @@
 package main
 
-type Storage interface{
+type Storage interface {
 	Add(Event)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
+
 func setupConnect() *ConnectServer {
 	l, _ := zap.NewDevelopment()
 	logger := l.Sugar()
@@ -52,7 +53,7 @@ func TestPerson2PersonMessage(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	defer ws1.Close()
-	if ! isConnected(ws1) {
+	if !isConnected(ws1) {
 		t.Fatalf("connection is not ok for ws1 since we can't read connected message from stream")
 	}
 
@@ -62,17 +63,17 @@ func TestPerson2PersonMessage(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 	defer ws2.Close()
-	if ! isConnected(ws2) {
+	if !isConnected(ws2) {
 		t.Fatalf("connection is not ok for ws2 since we can't read connected message from stream")
 	}
 	bs, _ := json.Marshal(NewMessagePayload{
-		Sender: "user1",
+		Sender:   "user1",
 		Receiver: "user2",
-		Body: "salam",
+		Body:     "salam",
 	})
 	err = ws1.WriteJSON(Event{
 		EventType: EventType_NewMessage,
-		Payload: bs,
+		Payload:   bs,
 	})
 	if err != nil {
 		t.Fatalf("cannot write salam message: %v", err)
