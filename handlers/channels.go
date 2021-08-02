@@ -17,11 +17,11 @@ func (c *ChannelHandler) CreateChannel(ctx echo.Context) error {
 	h := &models.Channel{}
 	err := ctx.Bind(h)
 	if err != nil {
-		return ctx.String(400, err.Error())
+        return ClientErr(ctx, err)
 	}
 	err = h.Insert(context.TODO(), c.DB, boil.Infer())
 	if err != nil {
-		return ctx.String(400, err.Error())
+        return ServerErr(ctx, err)
 	}
 	return OK(ctx, h)
 }

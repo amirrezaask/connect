@@ -17,11 +17,11 @@ func (c *HubHandler) CreateHub(ctx echo.Context) error {
 	h := &models.Hub{}
 	err := ctx.Bind(h)
 	if err != nil {
-		return ctx.String(400, err.Error())
+        return ClientErr(ctx, err)
 	}
 	err = h.Insert(context.TODO(), c.DB, boil.Infer())
 	if err != nil {
-		return ctx.String(400, err.Error())
+        return ServerErr(ctx, err)
 	}
 	return OK(ctx, h)
 }
@@ -34,12 +34,12 @@ func (c *HubHandler) AddUserToHub(ctx echo.Context) error {
     hu := &HubUser{}
     err := ctx.Bind(hu)
     if err != nil {
-		return ctx.String(400, err.Error())
+        return ClientErr(ctx, err)
 	}
     h := models.Hub{ID: hu.HubID}
     err = h.AddUsers(context.TODO(), c.DB, false)
     if err != nil {
-		return ctx.String(400, err.Error())
+        return ServerErr(ctx, err)
 	}
     return OK(ctx, hu)
 }
