@@ -7,7 +7,9 @@ require (
 	github.com/golobby/config/v2 v2.1.4
 	github.com/gorilla/websocket v1.4.2
 	github.com/labstack/echo/v4 v4.5.0
+	github.com/lib/pq v1.10.2 // indirect
 	github.com/posener/wstest v1.2.0 // indirect
+	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	github.com/volatiletech/sqlboiler v3.7.1+incompatible // indirect
