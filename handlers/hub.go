@@ -37,7 +37,7 @@ func (c *HubHandler) AddUserToHub(ctx echo.Context) error {
         return ClientErr(ctx, err)
 	}
     h := models.Hub{ID: hu.HubID}
-    err = h.AddUsers(context.TODO(), c.DB, false)
+    err = h.AddUsers(context.TODO(), c.DB, false, &models.User{ID: hu.UserID})
     if err != nil {
         return ServerErr(ctx, err)
 	}
