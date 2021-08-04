@@ -104,6 +104,7 @@ func removeUser(db *sql.DB, userID string) error {
     _, err := models.Users(models.UserWhere.ID.EQ(userID)).DeleteAll(context.TODO(), db)
     return err
 }
+
 func TestAddUserToHub(t *testing.T) {
     clean := func(db *sql.DB, t *testing.T) {
         _, err := db.Exec(`DELETE FROM hub_users WHERE user_id='userid' AND hub_id='hubid'`)
@@ -131,5 +132,33 @@ func TestAddUserToHub(t *testing.T) {
 	var count int
 	assert.NoError(t, row.Scan(&count))
 	assert.Equal(t, 1, count)
+}
 
+func addUserToHub(db *sql.DB, userID string, hubID string) error {
+    _, err := db.Exec(`INSERT INTO hub_users (user_id, hub_id) VALUES ($1, $2)`, userID, hubID)
+    return err
+}
+
+func TestRemoveUserFromHub(t *testing.T) {
+    hubHandler := setupHubHandler(t)
+    db := hubHandler.DB
+    clean := func(db *sql.DB, t *testing.T) {
+    }
+    defer clean(db, t)
+
+    assert.NoError(t, addUser(db, "userid"))
+    assert.NoError(t, addHub(db, "hubid"))
+    assert.NoError(t, addUserToHub(db, "userid", "hubid"))
+
+    req, rec, ctx := setupReq(strings.NewReader(`{"user_id": "userid", "hub_id": "hubid"}`))
+	_ = req
+	err := hubHandler.RemoveUserFromHub(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+    row := db.QueryRow(`SELECT COUNT(user_id) FROM hub_users WHERE user_id='userid'`)
+	assert.NoError(t, row.Err())
+	var count int
+	assert.NoError(t, row.Scan(&count))
+	assert.Equal(t, 0, count)
 }
