@@ -56,7 +56,7 @@ func TestCreateHub(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func RemoveHub(t *testing.T) {
+func TestRemoveHub(t *testing.T) {
 	hubHandler := setupHubHandler(t)
     // Adding a hub
 	db := hubHandler.DB
