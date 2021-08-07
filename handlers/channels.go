@@ -69,7 +69,7 @@ func (c *ChannelHandler) RemoveUserFromChannel(ctx echo.Context) error {
 		return ClientErr(ctx, err)
 	}
 	channel := &models.Channel{ID: cu.ChannelID}
-	err = channel.RemoveUsers(ctx.Request().Context(), c.DB, false, &models.User{ID: cu.UserID})
+	err = channel.RemoveUsers(ctx.Request().Context(), c.DB, &models.User{ID: cu.UserID})
 	if err != nil {
 		return ServerErr(ctx, err)
 	}
