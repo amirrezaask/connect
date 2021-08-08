@@ -1034,7 +1034,7 @@ func (o *User) AddChannelPermissions(ctx context.Context, exec boil.ContextExecu
 				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 				strmangle.WhereClause("\"", "\"", 2, channelPermissionPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.UserID, rel.ChannelID}
+			values := []interface{}{o.ID, rel.UserID, rel.ChannelID, rel.RoleName}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)
@@ -1231,7 +1231,7 @@ func (o *User) AddHubPermissions(ctx context.Context, exec boil.ContextExecutor,
 				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 				strmangle.WhereClause("\"", "\"", 2, hubPermissionPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.UserID, rel.HubID}
+			values := []interface{}{o.ID, rel.UserID, rel.HubID, rel.RoleName}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

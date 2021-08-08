@@ -37,15 +37,15 @@ CREATE TABLE IF NOT EXISTS channel_users (
 CREATE TABLE IF NOT EXISTS hub_permissions (
     user_id varchar(255) REFERENCES users(id),
     hub_id varchar(255) REFERENCES hubs(id),
-    premission bigint,
-    primary key(user_id, hub_id)
+    role_name varchar(255),
+    primary key(user_id, hub_id, role_name)
 );
 
 CREATE TABLE IF NOT EXISTS channel_permissions (
     user_id varchar(255) REFERENCES users(id),
     channel_id varchar(255) REFERENCES channels(id),
-    premission bigint,
-    primary key(user_id, channel_id)
+    role_name varchar(255),
+    primary key(user_id, channel_id, role_name)
 );
 
 

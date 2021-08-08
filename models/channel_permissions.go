@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,32 +23,32 @@ import (
 
 // ChannelPermission is an object representing the database table.
 type ChannelPermission struct {
-	UserID     string     `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	ChannelID  string     `boil:"channel_id" json:"channel_id" toml:"channel_id" yaml:"channel_id"`
-	Premission null.Int64 `boil:"premission" json:"premission,omitempty" toml:"premission" yaml:"premission,omitempty"`
+	UserID    string `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	ChannelID string `boil:"channel_id" json:"channel_id" toml:"channel_id" yaml:"channel_id"`
+	RoleName  string `boil:"role_name" json:"role_name" toml:"role_name" yaml:"role_name"`
 
 	R *channelPermissionR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L channelPermissionL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ChannelPermissionColumns = struct {
-	UserID     string
-	ChannelID  string
-	Premission string
+	UserID    string
+	ChannelID string
+	RoleName  string
 }{
-	UserID:     "user_id",
-	ChannelID:  "channel_id",
-	Premission: "premission",
+	UserID:    "user_id",
+	ChannelID: "channel_id",
+	RoleName:  "role_name",
 }
 
 var ChannelPermissionTableColumns = struct {
-	UserID     string
-	ChannelID  string
-	Premission string
+	UserID    string
+	ChannelID string
+	RoleName  string
 }{
-	UserID:     "channel_permissions.user_id",
-	ChannelID:  "channel_permissions.channel_id",
-	Premission: "channel_permissions.premission",
+	UserID:    "channel_permissions.user_id",
+	ChannelID: "channel_permissions.channel_id",
+	RoleName:  "channel_permissions.role_name",
 }
 
 // Generated where
@@ -77,37 +76,14 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
-type whereHelpernull_Int64 struct{ field string }
-
-func (w whereHelpernull_Int64) EQ(x null.Int64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
-}
-func (w whereHelpernull_Int64) NEQ(x null.Int64) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
-}
-func (w whereHelpernull_Int64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Int64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
-func (w whereHelpernull_Int64) LT(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpernull_Int64) LTE(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpernull_Int64) GT(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpernull_Int64) GTE(x null.Int64) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
 var ChannelPermissionWhere = struct {
-	UserID     whereHelperstring
-	ChannelID  whereHelperstring
-	Premission whereHelpernull_Int64
+	UserID    whereHelperstring
+	ChannelID whereHelperstring
+	RoleName  whereHelperstring
 }{
-	UserID:     whereHelperstring{field: "\"channel_permissions\".\"user_id\""},
-	ChannelID:  whereHelperstring{field: "\"channel_permissions\".\"channel_id\""},
-	Premission: whereHelpernull_Int64{field: "\"channel_permissions\".\"premission\""},
+	UserID:    whereHelperstring{field: "\"channel_permissions\".\"user_id\""},
+	ChannelID: whereHelperstring{field: "\"channel_permissions\".\"channel_id\""},
+	RoleName:  whereHelperstring{field: "\"channel_permissions\".\"role_name\""},
 }
 
 // ChannelPermissionRels is where relationship names are stored.
@@ -134,10 +110,10 @@ func (*channelPermissionR) NewStruct() *channelPermissionR {
 type channelPermissionL struct{}
 
 var (
-	channelPermissionAllColumns            = []string{"user_id", "channel_id", "premission"}
-	channelPermissionColumnsWithoutDefault = []string{"user_id", "channel_id", "premission"}
+	channelPermissionAllColumns            = []string{"user_id", "channel_id", "role_name"}
+	channelPermissionColumnsWithoutDefault = []string{"user_id", "channel_id", "role_name"}
 	channelPermissionColumnsWithDefault    = []string{}
-	channelPermissionPrimaryKeyColumns     = []string{"user_id", "channel_id"}
+	channelPermissionPrimaryKeyColumns     = []string{"user_id", "channel_id", "role_name"}
 )
 
 type (
@@ -667,7 +643,7 @@ func (o *ChannelPermission) SetChannel(ctx context.Context, exec boil.ContextExe
 		strmangle.SetParamNames("\"", "\"", 1, []string{"channel_id"}),
 		strmangle.WhereClause("\"", "\"", 2, channelPermissionPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.UserID, o.ChannelID}
+	values := []interface{}{related.ID, o.UserID, o.ChannelID, o.RoleName}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -714,7 +690,7 @@ func (o *ChannelPermission) SetUser(ctx context.Context, exec boil.ContextExecut
 		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 		strmangle.WhereClause("\"", "\"", 2, channelPermissionPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.UserID, o.ChannelID}
+	values := []interface{}{related.ID, o.UserID, o.ChannelID, o.RoleName}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -753,7 +729,7 @@ func ChannelPermissions(mods ...qm.QueryMod) channelPermissionQuery {
 
 // FindChannelPermission retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindChannelPermission(ctx context.Context, exec boil.ContextExecutor, userID string, channelID string, selectCols ...string) (*ChannelPermission, error) {
+func FindChannelPermission(ctx context.Context, exec boil.ContextExecutor, userID string, channelID string, roleName string, selectCols ...string) (*ChannelPermission, error) {
 	channelPermissionObj := &ChannelPermission{}
 
 	sel := "*"
@@ -761,10 +737,10 @@ func FindChannelPermission(ctx context.Context, exec boil.ContextExecutor, userI
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"channel_permissions\" where \"user_id\"=$1 AND \"channel_id\"=$2", sel,
+		"select %s from \"channel_permissions\" where \"user_id\"=$1 AND \"channel_id\"=$2 AND \"role_name\"=$3", sel,
 	)
 
-	q := queries.Raw(query, userID, channelID)
+	q := queries.Raw(query, userID, channelID, roleName)
 
 	err := q.Bind(ctx, exec, channelPermissionObj)
 	if err != nil {
@@ -1115,7 +1091,7 @@ func (o *ChannelPermission) Delete(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), channelPermissionPrimaryKeyMapping)
-	sql := "DELETE FROM \"channel_permissions\" WHERE \"user_id\"=$1 AND \"channel_id\"=$2"
+	sql := "DELETE FROM \"channel_permissions\" WHERE \"user_id\"=$1 AND \"channel_id\"=$2 AND \"role_name\"=$3"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1212,7 +1188,7 @@ func (o ChannelPermissionSlice) DeleteAll(ctx context.Context, exec boil.Context
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *ChannelPermission) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindChannelPermission(ctx, exec, o.UserID, o.ChannelID)
+	ret, err := FindChannelPermission(ctx, exec, o.UserID, o.ChannelID, o.RoleName)
 	if err != nil {
 		return err
 	}
@@ -1251,16 +1227,16 @@ func (o *ChannelPermissionSlice) ReloadAll(ctx context.Context, exec boil.Contex
 }
 
 // ChannelPermissionExists checks if the ChannelPermission row exists.
-func ChannelPermissionExists(ctx context.Context, exec boil.ContextExecutor, userID string, channelID string) (bool, error) {
+func ChannelPermissionExists(ctx context.Context, exec boil.ContextExecutor, userID string, channelID string, roleName string) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"channel_permissions\" where \"user_id\"=$1 AND \"channel_id\"=$2 limit 1)"
+	sql := "select exists(select 1 from \"channel_permissions\" where \"user_id\"=$1 AND \"channel_id\"=$2 AND \"role_name\"=$3 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, userID, channelID)
+		fmt.Fprintln(writer, userID, channelID, roleName)
 	}
-	row := exec.QueryRowContext(ctx, sql, userID, channelID)
+	row := exec.QueryRowContext(ctx, sql, userID, channelID, roleName)
 
 	err := row.Scan(&exists)
 	if err != nil {

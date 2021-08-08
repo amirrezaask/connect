@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,44 +23,44 @@ import (
 
 // HubPermission is an object representing the database table.
 type HubPermission struct {
-	UserID     string     `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
-	HubID      string     `boil:"hub_id" json:"hub_id" toml:"hub_id" yaml:"hub_id"`
-	Premission null.Int64 `boil:"premission" json:"premission,omitempty" toml:"premission" yaml:"premission,omitempty"`
+	UserID   string `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	HubID    string `boil:"hub_id" json:"hub_id" toml:"hub_id" yaml:"hub_id"`
+	RoleName string `boil:"role_name" json:"role_name" toml:"role_name" yaml:"role_name"`
 
 	R *hubPermissionR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L hubPermissionL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var HubPermissionColumns = struct {
-	UserID     string
-	HubID      string
-	Premission string
+	UserID   string
+	HubID    string
+	RoleName string
 }{
-	UserID:     "user_id",
-	HubID:      "hub_id",
-	Premission: "premission",
+	UserID:   "user_id",
+	HubID:    "hub_id",
+	RoleName: "role_name",
 }
 
 var HubPermissionTableColumns = struct {
-	UserID     string
-	HubID      string
-	Premission string
+	UserID   string
+	HubID    string
+	RoleName string
 }{
-	UserID:     "hub_permissions.user_id",
-	HubID:      "hub_permissions.hub_id",
-	Premission: "hub_permissions.premission",
+	UserID:   "hub_permissions.user_id",
+	HubID:    "hub_permissions.hub_id",
+	RoleName: "hub_permissions.role_name",
 }
 
 // Generated where
 
 var HubPermissionWhere = struct {
-	UserID     whereHelperstring
-	HubID      whereHelperstring
-	Premission whereHelpernull_Int64
+	UserID   whereHelperstring
+	HubID    whereHelperstring
+	RoleName whereHelperstring
 }{
-	UserID:     whereHelperstring{field: "\"hub_permissions\".\"user_id\""},
-	HubID:      whereHelperstring{field: "\"hub_permissions\".\"hub_id\""},
-	Premission: whereHelpernull_Int64{field: "\"hub_permissions\".\"premission\""},
+	UserID:   whereHelperstring{field: "\"hub_permissions\".\"user_id\""},
+	HubID:    whereHelperstring{field: "\"hub_permissions\".\"hub_id\""},
+	RoleName: whereHelperstring{field: "\"hub_permissions\".\"role_name\""},
 }
 
 // HubPermissionRels is where relationship names are stored.
@@ -88,10 +87,10 @@ func (*hubPermissionR) NewStruct() *hubPermissionR {
 type hubPermissionL struct{}
 
 var (
-	hubPermissionAllColumns            = []string{"user_id", "hub_id", "premission"}
-	hubPermissionColumnsWithoutDefault = []string{"user_id", "hub_id", "premission"}
+	hubPermissionAllColumns            = []string{"user_id", "hub_id", "role_name"}
+	hubPermissionColumnsWithoutDefault = []string{"user_id", "hub_id", "role_name"}
 	hubPermissionColumnsWithDefault    = []string{}
-	hubPermissionPrimaryKeyColumns     = []string{"user_id", "hub_id"}
+	hubPermissionPrimaryKeyColumns     = []string{"user_id", "hub_id", "role_name"}
 )
 
 type (
@@ -621,7 +620,7 @@ func (o *HubPermission) SetHub(ctx context.Context, exec boil.ContextExecutor, i
 		strmangle.SetParamNames("\"", "\"", 1, []string{"hub_id"}),
 		strmangle.WhereClause("\"", "\"", 2, hubPermissionPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.UserID, o.HubID}
+	values := []interface{}{related.ID, o.UserID, o.HubID, o.RoleName}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -668,7 +667,7 @@ func (o *HubPermission) SetUser(ctx context.Context, exec boil.ContextExecutor, 
 		strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
 		strmangle.WhereClause("\"", "\"", 2, hubPermissionPrimaryKeyColumns),
 	)
-	values := []interface{}{related.ID, o.UserID, o.HubID}
+	values := []interface{}{related.ID, o.UserID, o.HubID, o.RoleName}
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -707,7 +706,7 @@ func HubPermissions(mods ...qm.QueryMod) hubPermissionQuery {
 
 // FindHubPermission retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindHubPermission(ctx context.Context, exec boil.ContextExecutor, userID string, hubID string, selectCols ...string) (*HubPermission, error) {
+func FindHubPermission(ctx context.Context, exec boil.ContextExecutor, userID string, hubID string, roleName string, selectCols ...string) (*HubPermission, error) {
 	hubPermissionObj := &HubPermission{}
 
 	sel := "*"
@@ -715,10 +714,10 @@ func FindHubPermission(ctx context.Context, exec boil.ContextExecutor, userID st
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"hub_permissions\" where \"user_id\"=$1 AND \"hub_id\"=$2", sel,
+		"select %s from \"hub_permissions\" where \"user_id\"=$1 AND \"hub_id\"=$2 AND \"role_name\"=$3", sel,
 	)
 
-	q := queries.Raw(query, userID, hubID)
+	q := queries.Raw(query, userID, hubID, roleName)
 
 	err := q.Bind(ctx, exec, hubPermissionObj)
 	if err != nil {
@@ -1069,7 +1068,7 @@ func (o *HubPermission) Delete(ctx context.Context, exec boil.ContextExecutor) (
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), hubPermissionPrimaryKeyMapping)
-	sql := "DELETE FROM \"hub_permissions\" WHERE \"user_id\"=$1 AND \"hub_id\"=$2"
+	sql := "DELETE FROM \"hub_permissions\" WHERE \"user_id\"=$1 AND \"hub_id\"=$2 AND \"role_name\"=$3"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1166,7 +1165,7 @@ func (o HubPermissionSlice) DeleteAll(ctx context.Context, exec boil.ContextExec
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *HubPermission) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindHubPermission(ctx, exec, o.UserID, o.HubID)
+	ret, err := FindHubPermission(ctx, exec, o.UserID, o.HubID, o.RoleName)
 	if err != nil {
 		return err
 	}
@@ -1205,16 +1204,16 @@ func (o *HubPermissionSlice) ReloadAll(ctx context.Context, exec boil.ContextExe
 }
 
 // HubPermissionExists checks if the HubPermission row exists.
-func HubPermissionExists(ctx context.Context, exec boil.ContextExecutor, userID string, hubID string) (bool, error) {
+func HubPermissionExists(ctx context.Context, exec boil.ContextExecutor, userID string, hubID string, roleName string) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"hub_permissions\" where \"user_id\"=$1 AND \"hub_id\"=$2 limit 1)"
+	sql := "select exists(select 1 from \"hub_permissions\" where \"user_id\"=$1 AND \"hub_id\"=$2 AND \"role_name\"=$3 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, userID, hubID)
+		fmt.Fprintln(writer, userID, hubID, roleName)
 	}
-	row := exec.QueryRowContext(ctx, sql, userID, hubID)
+	row := exec.QueryRowContext(ctx, sql, userID, hubID, roleName)
 
 	err := row.Scan(&exists)
 	if err != nil {

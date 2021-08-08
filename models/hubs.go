@@ -848,7 +848,7 @@ func (o *Hub) AddHubPermissions(ctx context.Context, exec boil.ContextExecutor, 
 				strmangle.SetParamNames("\"", "\"", 1, []string{"hub_id"}),
 				strmangle.WhereClause("\"", "\"", 2, hubPermissionPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.UserID, rel.HubID}
+			values := []interface{}{o.ID, rel.UserID, rel.HubID, rel.RoleName}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

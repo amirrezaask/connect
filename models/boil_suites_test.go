@@ -19,12 +19,6 @@ func TestParent(t *testing.T) {
 	t.Run("Users", testUsers)
 }
 
-func TestSoftDelete(t *testing.T) {}
-
-func TestQuerySoftDeleteAll(t *testing.T) {}
-
-func TestSliceSoftDeleteAll(t *testing.T) {}
-
 func TestDelete(t *testing.T) {
 	t.Run("ChannelPermissions", testChannelPermissionsDelete)
 	t.Run("Channels", testChannelsDelete)

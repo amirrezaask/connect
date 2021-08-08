@@ -149,7 +149,7 @@ func testHubPermissionsExists(t *testing.T) {
 		t.Error(err)
 	}
 
-	e, err := HubPermissionExists(ctx, tx, o.UserID, o.HubID)
+	e, err := HubPermissionExists(ctx, tx, o.UserID, o.HubID, o.RoleName)
 	if err != nil {
 		t.Errorf("Unable to check if HubPermission exists: %s", err)
 	}
@@ -175,7 +175,7 @@ func testHubPermissionsFind(t *testing.T) {
 		t.Error(err)
 	}
 
-	hubPermissionFound, err := FindHubPermission(ctx, tx, o.UserID, o.HubID)
+	hubPermissionFound, err := FindHubPermission(ctx, tx, o.UserID, o.HubID, o.RoleName)
 	if err != nil {
 		t.Error(err)
 	}
@@ -641,7 +641,7 @@ func testHubPermissionToOneSetOpHubUsingHub(t *testing.T) {
 			t.Error("foreign key was wrong value", a.HubID)
 		}
 
-		if exists, err := HubPermissionExists(ctx, tx, a.UserID, a.HubID); err != nil {
+		if exists, err := HubPermissionExists(ctx, tx, a.UserID, a.HubID, a.RoleName); err != nil {
 			t.Fatal(err)
 		} else if !exists {
 			t.Error("want 'a' to exist")
@@ -694,7 +694,7 @@ func testHubPermissionToOneSetOpUserUsingUser(t *testing.T) {
 			t.Error("foreign key was wrong value", a.UserID)
 		}
 
-		if exists, err := HubPermissionExists(ctx, tx, a.UserID, a.HubID); err != nil {
+		if exists, err := HubPermissionExists(ctx, tx, a.UserID, a.HubID, a.RoleName); err != nil {
 			t.Fatal(err)
 		} else if !exists {
 			t.Error("want 'a' to exist")
@@ -777,7 +777,7 @@ func testHubPermissionsSelect(t *testing.T) {
 }
 
 var (
-	hubPermissionDBTypes = map[string]string{`UserID`: `character varying`, `HubID`: `character varying`, `Premission`: `bigint`}
+	hubPermissionDBTypes = map[string]string{`UserID`: `character varying`, `HubID`: `character varying`, `RoleName`: `character varying`}
 	_                    = bytes.MinRead
 )
 

@@ -666,7 +666,7 @@ func (o *Channel) AddChannelPermissions(ctx context.Context, exec boil.ContextEx
 				strmangle.SetParamNames("\"", "\"", 1, []string{"channel_id"}),
 				strmangle.WhereClause("\"", "\"", 2, channelPermissionPrimaryKeyColumns),
 			)
-			values := []interface{}{o.ID, rel.UserID, rel.ChannelID}
+			values := []interface{}{o.ID, rel.UserID, rel.ChannelID, rel.RoleName}
 
 			if boil.IsDebug(ctx) {
 				writer := boil.DebugWriterFrom(ctx)

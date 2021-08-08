@@ -149,7 +149,7 @@ func testChannelPermissionsExists(t *testing.T) {
 		t.Error(err)
 	}
 
-	e, err := ChannelPermissionExists(ctx, tx, o.UserID, o.ChannelID)
+	e, err := ChannelPermissionExists(ctx, tx, o.UserID, o.ChannelID, o.RoleName)
 	if err != nil {
 		t.Errorf("Unable to check if ChannelPermission exists: %s", err)
 	}
@@ -175,7 +175,7 @@ func testChannelPermissionsFind(t *testing.T) {
 		t.Error(err)
 	}
 
-	channelPermissionFound, err := FindChannelPermission(ctx, tx, o.UserID, o.ChannelID)
+	channelPermissionFound, err := FindChannelPermission(ctx, tx, o.UserID, o.ChannelID, o.RoleName)
 	if err != nil {
 		t.Error(err)
 	}
@@ -641,7 +641,7 @@ func testChannelPermissionToOneSetOpChannelUsingChannel(t *testing.T) {
 			t.Error("foreign key was wrong value", a.ChannelID)
 		}
 
-		if exists, err := ChannelPermissionExists(ctx, tx, a.UserID, a.ChannelID); err != nil {
+		if exists, err := ChannelPermissionExists(ctx, tx, a.UserID, a.ChannelID, a.RoleName); err != nil {
 			t.Fatal(err)
 		} else if !exists {
 			t.Error("want 'a' to exist")
@@ -694,7 +694,7 @@ func testChannelPermissionToOneSetOpUserUsingUser(t *testing.T) {
 			t.Error("foreign key was wrong value", a.UserID)
 		}
 
-		if exists, err := ChannelPermissionExists(ctx, tx, a.UserID, a.ChannelID); err != nil {
+		if exists, err := ChannelPermissionExists(ctx, tx, a.UserID, a.ChannelID, a.RoleName); err != nil {
 			t.Fatal(err)
 		} else if !exists {
 			t.Error("want 'a' to exist")
@@ -777,7 +777,7 @@ func testChannelPermissionsSelect(t *testing.T) {
 }
 
 var (
-	channelPermissionDBTypes = map[string]string{`UserID`: `character varying`, `ChannelID`: `character varying`, `Premission`: `bigint`}
+	channelPermissionDBTypes = map[string]string{`UserID`: `character varying`, `ChannelID`: `character varying`, `RoleName`: `character varying`}
 	_                        = bytes.MinRead
 )
 
