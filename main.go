@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/amirrezaask/connect/auth"
 	"github.com/amirrezaask/connect/bus"
 	"github.com/amirrezaask/connect/domain"
 	"github.com/amirrezaask/connect/handlers"
@@ -15,9 +16,12 @@ import (
 
 func setupAPIServer(db *sql.DB) http.Handler {
 	e := echo.New()
+	authenticator := &auth.JWTAuthenticator{Secret: "SecretKey"}
 
 	hubHandler := handlers.HubHandler{DB: db}
 	channelHandler := handlers.ChannelHandler{DB: db}
+
+	e.Use(authenticator.EchoMiddleware())
 
 	e.POST("/hub", hubHandler.CreateHub)
 	e.POST("/hub_users", hubHandler.AddUserToHub)
