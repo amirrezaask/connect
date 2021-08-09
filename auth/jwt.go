@@ -16,7 +16,7 @@ func (j *JWTAuthenticator) ClaimsOf(t string) (jwt.Claims, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-		return j.Secret, nil
+		return []byte(j.Secret), nil
 	})
 
 	if err != nil {
@@ -31,7 +31,7 @@ func (j *JWTAuthenticator) ClaimsOf(t string) (jwt.Claims, error) {
 
 func (j *JWTAuthenticator) MakeToken(claims map[string]interface{}) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims(claims))
-	tokenString, err := token.SignedString(j.Secret)
+	tokenString, err := token.SignedString([]byte(j.Secret))
 	if err != nil {
 		return "", err
 	}
