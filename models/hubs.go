@@ -67,10 +67,12 @@ var HubWhere = struct {
 // HubRels is where relationship names are stored.
 var HubRels = struct {
 	CreatorUser    string
+	Channels       string
 	HubPermissions string
 	Users          string
 }{
 	CreatorUser:    "CreatorUser",
+	Channels:       "Channels",
 	HubPermissions: "HubPermissions",
 	Users:          "Users",
 }
@@ -78,6 +80,7 @@ var HubRels = struct {
 // hubR is where relationships are stored.
 type hubR struct {
 	CreatorUser    *User              `boil:"CreatorUser" json:"CreatorUser" toml:"CreatorUser" yaml:"CreatorUser"`
+	Channels       ChannelSlice       `boil:"Channels" json:"Channels" toml:"Channels" yaml:"Channels"`
 	HubPermissions HubPermissionSlice `boil:"HubPermissions" json:"HubPermissions" toml:"HubPermissions" yaml:"HubPermissions"`
 	Users          UserSlice          `boil:"Users" json:"Users" toml:"Users" yaml:"Users"`
 }
@@ -386,6 +389,27 @@ func (o *Hub) CreatorUser(mods ...qm.QueryMod) userQuery {
 	return query
 }
 
+// Channels retrieves all the channel's Channels with an executor.
+func (o *Hub) Channels(mods ...qm.QueryMod) channelQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"channels\".\"hub_id\"=?", o.ID),
+	)
+
+	query := Channels(queryMods...)
+	queries.SetFrom(query.Query, "\"channels\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"channels\".*"})
+	}
+
+	return query
+}
+
 // HubPermissions retrieves all the hub_permission's HubPermissions with an executor.
 func (o *Hub) HubPermissions(mods ...qm.QueryMod) hubPermissionQuery {
 	var queryMods []qm.QueryMod
@@ -529,6 +553,104 @@ func (hubL) LoadCreatorUser(ctx context.Context, e boil.ContextExecutor, singula
 					foreign.R = &userR{}
 				}
 				foreign.R.CreatorHubs = append(foreign.R.CreatorHubs, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadChannels allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (hubL) LoadChannels(ctx context.Context, e boil.ContextExecutor, singular bool, maybeHub interface{}, mods queries.Applicator) error {
+	var slice []*Hub
+	var object *Hub
+
+	if singular {
+		object = maybeHub.(*Hub)
+	} else {
+		slice = *maybeHub.(*[]*Hub)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &hubR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &hubR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`channels`),
+		qm.WhereIn(`channels.hub_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load channels")
+	}
+
+	var resultSlice []*Channel
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice channels")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on channels")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for channels")
+	}
+
+	if len(channelAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Channels = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &channelR{}
+			}
+			foreign.R.Hub = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.HubID {
+				local.R.Channels = append(local.R.Channels, foreign)
+				if foreign.R == nil {
+					foreign.R = &channelR{}
+				}
+				foreign.R.Hub = local
 				break
 			}
 		}
@@ -826,6 +948,59 @@ func (o *Hub) RemoveCreatorUser(ctx context.Context, exec boil.ContextExecutor, 
 		}
 		related.R.CreatorHubs = related.R.CreatorHubs[:ln-1]
 		break
+	}
+	return nil
+}
+
+// AddChannels adds the given related objects to the existing relationships
+// of the hub, optionally inserting them as new records.
+// Appends related to o.R.Channels.
+// Sets related.R.Hub appropriately.
+func (o *Hub) AddChannels(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Channel) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.HubID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"channels\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"hub_id"}),
+				strmangle.WhereClause("\"", "\"", 2, channelPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.HubID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &hubR{
+			Channels: related,
+		}
+	} else {
+		o.R.Channels = append(o.R.Channels, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &channelR{
+				Hub: o,
+			}
+		} else {
+			rel.R.Hub = o
+		}
 	}
 	return nil
 }

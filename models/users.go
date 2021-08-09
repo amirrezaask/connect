@@ -630,7 +630,7 @@ func (userL) LoadChannels(ctx context.Context, e boil.ContextExecutor, singular 
 	}
 
 	query := NewQuery(
-		qm.Select("\"channels\".id, \"channels\".name, \"channels\".type, \"a\".\"user_id\""),
+		qm.Select("\"channels\".id, \"channels\".name, \"channels\".type, \"channels\".hub_id, \"a\".\"user_id\""),
 		qm.From("\"channels\""),
 		qm.InnerJoin("\"channel_users\" as \"a\" on \"channels\".\"id\" = \"a\".\"channel_id\""),
 		qm.WhereIn("\"a\".\"user_id\" in ?", args...),
@@ -651,7 +651,7 @@ func (userL) LoadChannels(ctx context.Context, e boil.ContextExecutor, singular 
 		one := new(Channel)
 		var localJoinCol string
 
-		err = results.Scan(&one.ID, &one.Name, &one.Type, &localJoinCol)
+		err = results.Scan(&one.ID, &one.Name, &one.Type, &one.HubID, &localJoinCol)
 		if err != nil {
 			return errors.Wrap(err, "failed to scan eager loaded results for channels")
 		}

@@ -41,6 +41,7 @@ func TestCreateHub(t *testing.T) {
 	_ = req
 	err := hubHandler.CreateHub(ctx)
 	assert.NoError(t, err)
+	// assert.Equal(t, "", string(rec.Body.Bytes()))
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	// CheckDB

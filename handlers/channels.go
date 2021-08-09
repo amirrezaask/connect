@@ -26,7 +26,7 @@ func (c *ChannelHandler) CreateChannel(ctx echo.Context) error {
 	return OK(ctx, h)
 }
 
-func (c *ChannelHandler) DeleteChannel(ctx echo.Context) error {
+func (c *ChannelHandler) RemoveChannel(ctx echo.Context) error {
 	h := &models.Channel{}
 	err := ctx.Bind(h)
 	if err != nil {

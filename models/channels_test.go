@@ -959,6 +959,115 @@ func testChannelToManyRemoveOpUsers(t *testing.T) {
 	}
 }
 
+func testChannelToOneHubUsingHub(t *testing.T) {
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var local Channel
+	var foreign Hub
+
+	seed := randomize.NewSeed()
+	if err := randomize.Struct(seed, &local, channelDBTypes, false, channelColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Channel struct: %s", err)
+	}
+	if err := randomize.Struct(seed, &foreign, hubDBTypes, false, hubColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Hub struct: %s", err)
+	}
+
+	if err := foreign.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	local.HubID = foreign.ID
+	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := local.Hub().One(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if check.ID != foreign.ID {
+		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
+	}
+
+	slice := ChannelSlice{&local}
+	if err = local.L.LoadHub(ctx, tx, false, (*[]*Channel)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if local.R.Hub == nil {
+		t.Error("struct should have been eager loaded")
+	}
+
+	local.R.Hub = nil
+	if err = local.L.LoadHub(ctx, tx, true, &local, nil); err != nil {
+		t.Fatal(err)
+	}
+	if local.R.Hub == nil {
+		t.Error("struct should have been eager loaded")
+	}
+}
+
+func testChannelToOneSetOpHubUsingHub(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Channel
+	var b, c Hub
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, channelDBTypes, false, strmangle.SetComplement(channelPrimaryKeyColumns, channelColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &b, hubDBTypes, false, strmangle.SetComplement(hubPrimaryKeyColumns, hubColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, hubDBTypes, false, strmangle.SetComplement(hubPrimaryKeyColumns, hubColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	for i, x := range []*Hub{&b, &c} {
+		err = a.SetHub(ctx, tx, i != 0, x)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if a.R.Hub != x {
+			t.Error("relationship struct not set to correct value")
+		}
+
+		if x.R.Channels[0] != &a {
+			t.Error("failed to append to foreign relationship struct")
+		}
+		if a.HubID != x.ID {
+			t.Error("foreign key was wrong value", a.HubID)
+		}
+
+		zero := reflect.Zero(reflect.TypeOf(a.HubID))
+		reflect.Indirect(reflect.ValueOf(&a.HubID)).Set(zero)
+
+		if err = a.Reload(ctx, tx); err != nil {
+			t.Fatal("failed to reload", err)
+		}
+
+		if a.HubID != x.ID {
+			t.Error("foreign key was wrong value", a.HubID, x.ID)
+		}
+	}
+}
+
 func testChannelsReload(t *testing.T) {
 	t.Parallel()
 
@@ -1033,7 +1142,7 @@ func testChannelsSelect(t *testing.T) {
 }
 
 var (
-	channelDBTypes = map[string]string{`ID`: `character varying`, `Name`: `character varying`, `Type`: `enum.channel_type_t('voice','text')`}
+	channelDBTypes = map[string]string{`ID`: `character varying`, `Name`: `character varying`, `Type`: `enum.channel_type_t('voice','text')`, `HubID`: `character varying`}
 	_              = bytes.MinRead
 )
 

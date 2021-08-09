@@ -117,6 +117,7 @@ func TestInsert(t *testing.T) {
 func TestToOne(t *testing.T) {
 	t.Run("ChannelPermissionToChannelUsingChannel", testChannelPermissionToOneChannelUsingChannel)
 	t.Run("ChannelPermissionToUserUsingUser", testChannelPermissionToOneUserUsingUser)
+	t.Run("ChannelToHubUsingHub", testChannelToOneHubUsingHub)
 	t.Run("HubPermissionToHubUsingHub", testHubPermissionToOneHubUsingHub)
 	t.Run("HubPermissionToUserUsingUser", testHubPermissionToOneUserUsingUser)
 	t.Run("HubToUserUsingCreatorUser", testHubToOneUserUsingCreatorUser)
@@ -131,6 +132,7 @@ func TestOneToOne(t *testing.T) {}
 func TestToMany(t *testing.T) {
 	t.Run("ChannelToChannelPermissions", testChannelToManyChannelPermissions)
 	t.Run("ChannelToUsers", testChannelToManyUsers)
+	t.Run("HubToChannels", testHubToManyChannels)
 	t.Run("HubToHubPermissions", testHubToManyHubPermissions)
 	t.Run("HubToUsers", testHubToManyUsers)
 	t.Run("UserToChannelPermissions", testUserToManyChannelPermissions)
@@ -145,6 +147,7 @@ func TestToMany(t *testing.T) {
 func TestToOneSet(t *testing.T) {
 	t.Run("ChannelPermissionToChannelUsingChannelPermissions", testChannelPermissionToOneSetOpChannelUsingChannel)
 	t.Run("ChannelPermissionToUserUsingChannelPermissions", testChannelPermissionToOneSetOpUserUsingUser)
+	t.Run("ChannelToHubUsingChannels", testChannelToOneSetOpHubUsingHub)
 	t.Run("HubPermissionToHubUsingHubPermissions", testHubPermissionToOneSetOpHubUsingHub)
 	t.Run("HubPermissionToUserUsingHubPermissions", testHubPermissionToOneSetOpUserUsingUser)
 	t.Run("HubToUserUsingCreatorHubs", testHubToOneSetOpUserUsingCreatorUser)
@@ -169,6 +172,7 @@ func TestOneToOneRemove(t *testing.T) {}
 func TestToManyAdd(t *testing.T) {
 	t.Run("ChannelToChannelPermissions", testChannelToManyAddOpChannelPermissions)
 	t.Run("ChannelToUsers", testChannelToManyAddOpUsers)
+	t.Run("HubToChannels", testHubToManyAddOpChannels)
 	t.Run("HubToHubPermissions", testHubToManyAddOpHubPermissions)
 	t.Run("HubToUsers", testHubToManyAddOpUsers)
 	t.Run("UserToChannelPermissions", testUserToManyAddOpChannelPermissions)
