@@ -10,3 +10,14 @@ TBA
 TBA
 # Clients
 TBA
+
+# Building
+TBA
+
+# Testing
+## Integration
+For integration testing:
+```bash
+# You should have docker and docker-compose installed
+.scripts/test_integration.sh
+```
