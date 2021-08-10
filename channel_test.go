@@ -9,6 +9,7 @@ import (
 
 	"github.com/amirrezaask/connect/handlers"
 	"github.com/amirrezaask/connect/models"
+	"github.com/amirrezaask/connect/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
@@ -24,8 +25,8 @@ func setupChannelHandler(t *testing.T) *handlers.ChannelHandler {
 
 func TestCreateChannel(t *testing.T) {
 	channelHandler := setupChannelHandler(t)
-	assert.NoError(t, addHub(channelHandler.DB, "hubid"))
-	_, rec, ctx := setupReq(strings.NewReader(`{"id": "myid", "name": "channelTestText", "type": "text", "hub_id": "hubid"}`))
+	assert.NoError(t, testutils.AddHub(channelHandler.DB, "hubid"))
+	_, rec, ctx := testutils.MakeRequest(http.MethodPost, strings.NewReader(`{"id": "myid", "name": "channelTestText", "type": "text", "hub_id": "hubid"}`))
 	err := channelHandler.CreateChannel(ctx)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
@@ -40,7 +41,7 @@ func TestCreateChannel(t *testing.T) {
 
 	// clean up
 	_, err = models.Channels(models.ChannelWhere.ID.EQ("myid")).DeleteAll(context.TODO(), channelHandler.DB)
-	assert.NoError(t, removeHub(db, "hubid"))
+	assert.NoError(t, testutils.RemoveHub(db, "hubid"))
 	assert.NoError(t, err)
 
 }
@@ -48,19 +49,18 @@ func TestRemoveChannel(t *testing.T) {
 	channelHandler := setupChannelHandler(t)
 	// Adding a channel
 	db := channelHandler.DB
-	assert.NoError(t, addHub(db, "hubid"))
 	channel := &models.Channel{
 		ID:    "myid",
 		HubID: "hubid",
 	}
+	assert.NoError(t, testutils.AddHub(db, "hubid"))
 
 	assert.NoError(t, channel.Insert(context.TODO(), db, boil.Infer()))
 
 	// Removing using API
-	req, rec, ctx := setupReq(strings.NewReader(`{"id": "myid"}`))
+	req, rec, ctx := testutils.MakeRequest(http.MethodPost, strings.NewReader(`{"id": "myid"}`))
 	_ = req
 	err := channelHandler.RemoveChannel(ctx)
-	assert.NoError(t, removeHub(db, "hubid"))
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -71,33 +71,27 @@ func TestRemoveChannel(t *testing.T) {
 	assert.NoError(t, row.Scan(&count))
 	assert.Equal(t, 0, count)
 
-}
-func removeChannel(db *sql.DB, channelID string) error {
-	_, err := models.Channels(models.ChannelWhere.ID.EQ(channelID)).DeleteAll(context.Background(), db)
-	return err
-}
-
-func addChannel(db *sql.DB, hubID, channelID string) error {
-	return (&models.Channel{ID: channelID, HubID: hubID}).Insert(context.TODO(), db, boil.Infer())
+	// clean
+	assert.NoError(t, testutils.RemoveHub(db, "hubid"))
 }
 
 func TestAddUserToChannel(t *testing.T) {
 	clean := func(db *sql.DB, t *testing.T) {
 		_, err := db.Exec(`DELETE FROM channel_users WHERE user_id='userid' AND channel_id='channelid'`)
 		assert.NoError(t, err)
-		assert.NoError(t, removeChannel(db, "channelid"))
-		assert.NoError(t, removeHub(db, "hubid"))
-		assert.NoError(t, removeUser(db, "userid"))
+		assert.NoError(t, testutils.RemoveChannel(db, "channelid"))
+		assert.NoError(t, testutils.RemoveHub(db, "hubid"))
+		assert.NoError(t, testutils.RemoveUser(db, "userid"))
 	}
 	channelHandler := setupChannelHandler(t)
 	db := channelHandler.DB
 	defer clean(channelHandler.DB, t)
-	assert.NoError(t, addHub(channelHandler.DB, "hubid"))
-	assert.NoError(t, addUser(channelHandler.DB, "userid"))
-	assert.NoError(t, addChannel(channelHandler.DB, "hubid", "channelid"))
+	assert.NoError(t, testutils.AddHub(channelHandler.DB, "hubid"))
+	assert.NoError(t, testutils.AddUser(channelHandler.DB, "userid"))
+	assert.NoError(t, testutils.AddChannel(channelHandler.DB, "hubid", "channelid"))
 
 	// Do the thing
-	req, rec, ctx := setupReq(strings.NewReader(`{"user_id": "userid", "channel_id": "channelid"}`))
+	req, rec, ctx := testutils.MakeRequest(http.MethodPost, strings.NewReader(`{"user_id": "userid", "channel_id": "channelid"}`))
 	_ = req
 	err := channelHandler.AddUserToChannel(ctx)
 	assert.NoError(t, err)
@@ -110,29 +104,24 @@ func TestAddUserToChannel(t *testing.T) {
 	assert.NoError(t, row.Scan(&count))
 	assert.Equal(t, 1, count)
 }
-
-func addUserToChannel(db *sql.DB, userID string, channelID string) error {
-	_, err := db.Exec(`INSERT INTO channel_users (user_id, channel_id) VALUES ($1, $2)`, userID, channelID)
-	return err
-}
 func TestRemoveUserFromChannel(t *testing.T) {
 	channelHandler := setupChannelHandler(t)
 	db := channelHandler.DB
 	clean := func(db *sql.DB, t *testing.T) {
 		_, err := db.Exec(`DELETE FROM channel_users WHERE user_id='userid' AND channel_id='channelid'`)
 		assert.NoError(t, err)
-		assert.NoError(t, removeChannel(db, "channelid"))
-		assert.NoError(t, removeHub(db, "hubid"))
-		assert.NoError(t, removeUser(db, "userid"))
+		assert.NoError(t, testutils.RemoveChannel(db, "channelid"))
+		assert.NoError(t, testutils.RemoveHub(db, "hubid"))
+		assert.NoError(t, testutils.RemoveUser(db, "userid"))
 	}
 	defer clean(db, t)
 
-	assert.NoError(t, addUser(db, "userid"))
-	assert.NoError(t, addHub(db, "hubid"))
-	assert.NoError(t, addChannel(db, "hubid", "channelid"))
-	assert.NoError(t, addUserToChannel(db, "userid", "channelid"))
+	assert.NoError(t, testutils.AddUser(db, "userid"))
+	assert.NoError(t, testutils.AddHub(db, "hubid"))
+	assert.NoError(t, testutils.AddChannel(db, "hubid", "channelid"))
+	assert.NoError(t, testutils.AddUserToChannel(db, "userid", "channelid"))
 
-	req, rec, ctx := setupReq(strings.NewReader(`{"user_id": "userid", "channel_id": "channelid"}`))
+	req, rec, ctx := testutils.MakeRequest(http.MethodPost, strings.NewReader(`{"user_id": "userid", "channel_id": "channelid"}`))
 	_ = req
 	err := channelHandler.RemoveUserFromChannel(ctx)
 	assert.NoError(t, err)

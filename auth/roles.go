@@ -7,10 +7,6 @@ import (
 	"github.com/amirrezaask/connect/models"
 )
 
-const (
-	ROLE_KEY = "roles"
-)
-
 type RoleManager struct {
 	DB *sql.DB
 }
@@ -23,6 +19,6 @@ func (r *RoleManager) HasRoleInHub(userID string, hubID string, role string) (bo
 
 func (r *RoleManager) HasRoleInChannel(userID string, channelID string, role string) (bool, error) {
 	return models.
-		HubPermissions(models.ChannelPermissionWhere.UserID.EQ(userID), models.ChannelPermissionWhere.ChannelID.EQ(channelID), models.ChannelPermissionWhere.RoleName.EQ(role)).
+		ChannelPermissions(models.ChannelPermissionWhere.UserID.EQ(userID), models.ChannelPermissionWhere.ChannelID.EQ(channelID), models.ChannelPermissionWhere.RoleName.EQ(role)).
 		Exists(context.TODO(), r.DB)
 }
