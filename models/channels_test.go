@@ -656,6 +656,83 @@ func testChannelToManyUsers(t *testing.T) {
 	}
 }
 
+func testChannelToManyMessages(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Channel
+	var b, c Message
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, channelDBTypes, true, channelColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Channel struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, messageDBTypes, false, messageColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, messageDBTypes, false, messageColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	queries.Assign(&b.ChannelID, a.ID)
+	queries.Assign(&c.ChannelID, a.ID)
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.Messages().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if queries.Equal(v.ChannelID, b.ChannelID) {
+			bFound = true
+		}
+		if queries.Equal(v.ChannelID, c.ChannelID) {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := ChannelSlice{&a}
+	if err = a.L.LoadMessages(ctx, tx, false, (*[]*Channel)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.Messages); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.Messages = nil
+	if err = a.L.LoadMessages(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.Messages); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
 func testChannelToManyAddOpChannelPermissions(t *testing.T) {
 	var err error
 
@@ -955,6 +1032,257 @@ func testChannelToManyRemoveOpUsers(t *testing.T) {
 		t.Error("relationship to d should have been preserved")
 	}
 	if a.R.Users[0] != &e {
+		t.Error("relationship to e should have been preserved")
+	}
+}
+
+func testChannelToManyAddOpMessages(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Channel
+	var b, c, d, e Message
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, channelDBTypes, false, strmangle.SetComplement(channelPrimaryKeyColumns, channelColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Message{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*Message{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddMessages(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if !queries.Equal(a.ID, first.ChannelID) {
+			t.Error("foreign key was wrong value", a.ID, first.ChannelID)
+		}
+		if !queries.Equal(a.ID, second.ChannelID) {
+			t.Error("foreign key was wrong value", a.ID, second.ChannelID)
+		}
+
+		if first.R.Channel != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.Channel != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.Messages[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.Messages[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.Messages().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+
+func testChannelToManySetOpMessages(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Channel
+	var b, c, d, e Message
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, channelDBTypes, false, strmangle.SetComplement(channelPrimaryKeyColumns, channelColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Message{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.SetMessages(ctx, tx, false, &b, &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := a.Messages().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	err = a.SetMessages(ctx, tx, true, &d, &e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = a.Messages().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	if !queries.IsValuerNil(b.ChannelID) {
+		t.Error("want b's foreign key value to be nil")
+	}
+	if !queries.IsValuerNil(c.ChannelID) {
+		t.Error("want c's foreign key value to be nil")
+	}
+	if !queries.Equal(a.ID, d.ChannelID) {
+		t.Error("foreign key was wrong value", a.ID, d.ChannelID)
+	}
+	if !queries.Equal(a.ID, e.ChannelID) {
+		t.Error("foreign key was wrong value", a.ID, e.ChannelID)
+	}
+
+	if b.R.Channel != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if c.R.Channel != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if d.R.Channel != &a {
+		t.Error("relationship was not added properly to the foreign struct")
+	}
+	if e.R.Channel != &a {
+		t.Error("relationship was not added properly to the foreign struct")
+	}
+
+	if a.R.Messages[0] != &d {
+		t.Error("relationship struct slice not set to correct value")
+	}
+	if a.R.Messages[1] != &e {
+		t.Error("relationship struct slice not set to correct value")
+	}
+}
+
+func testChannelToManyRemoveOpMessages(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Channel
+	var b, c, d, e Message
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, channelDBTypes, false, strmangle.SetComplement(channelPrimaryKeyColumns, channelColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Message{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.AddMessages(ctx, tx, true, foreigners...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := a.Messages().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 4 {
+		t.Error("count was wrong:", count)
+	}
+
+	err = a.RemoveMessages(ctx, tx, foreigners[:2]...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = a.Messages().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	if !queries.IsValuerNil(b.ChannelID) {
+		t.Error("want b's foreign key value to be nil")
+	}
+	if !queries.IsValuerNil(c.ChannelID) {
+		t.Error("want c's foreign key value to be nil")
+	}
+
+	if b.R.Channel != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if c.R.Channel != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if d.R.Channel != &a {
+		t.Error("relationship to a should have been preserved")
+	}
+	if e.R.Channel != &a {
+		t.Error("relationship to a should have been preserved")
+	}
+
+	if len(a.R.Messages) != 2 {
+		t.Error("should have preserved two relationships")
+	}
+
+	// Removal doesn't do a stable deletion for performance so we have to flip the order
+	if a.R.Messages[1] != &d {
+		t.Error("relationship to d should have been preserved")
+	}
+	if a.R.Messages[0] != &e {
 		t.Error("relationship to e should have been preserved")
 	}
 }

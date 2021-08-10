@@ -14,5 +14,7 @@ func TestUpsert(t *testing.T) {
 
 	t.Run("Hubs", testHubsUpsert)
 
+	t.Run("Messages", testMessagesUpsert)
+
 	t.Run("Users", testUsersUpsert)
 }

@@ -10,6 +10,7 @@ var TableNames = struct {
 	HubPermissions     string
 	HubUsers           string
 	Hubs               string
+	Messages           string
 	Users              string
 }{
 	ChannelPermissions: "channel_permissions",
@@ -18,5 +19,6 @@ var TableNames = struct {
 	HubPermissions:     "hub_permissions",
 	HubUsers:           "hub_users",
 	Hubs:               "hubs",
+	Messages:           "messages",
 	Users:              "users",
 }

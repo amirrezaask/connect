@@ -16,6 +16,7 @@ func TestParent(t *testing.T) {
 	t.Run("Channels", testChannels)
 	t.Run("HubPermissions", testHubPermissions)
 	t.Run("Hubs", testHubs)
+	t.Run("Messages", testMessages)
 	t.Run("Users", testUsers)
 }
 
@@ -24,6 +25,7 @@ func TestDelete(t *testing.T) {
 	t.Run("Channels", testChannelsDelete)
 	t.Run("HubPermissions", testHubPermissionsDelete)
 	t.Run("Hubs", testHubsDelete)
+	t.Run("Messages", testMessagesDelete)
 	t.Run("Users", testUsersDelete)
 }
 
@@ -32,6 +34,7 @@ func TestQueryDeleteAll(t *testing.T) {
 	t.Run("Channels", testChannelsQueryDeleteAll)
 	t.Run("HubPermissions", testHubPermissionsQueryDeleteAll)
 	t.Run("Hubs", testHubsQueryDeleteAll)
+	t.Run("Messages", testMessagesQueryDeleteAll)
 	t.Run("Users", testUsersQueryDeleteAll)
 }
 
@@ -40,6 +43,7 @@ func TestSliceDeleteAll(t *testing.T) {
 	t.Run("Channels", testChannelsSliceDeleteAll)
 	t.Run("HubPermissions", testHubPermissionsSliceDeleteAll)
 	t.Run("Hubs", testHubsSliceDeleteAll)
+	t.Run("Messages", testMessagesSliceDeleteAll)
 	t.Run("Users", testUsersSliceDeleteAll)
 }
 
@@ -48,6 +52,7 @@ func TestExists(t *testing.T) {
 	t.Run("Channels", testChannelsExists)
 	t.Run("HubPermissions", testHubPermissionsExists)
 	t.Run("Hubs", testHubsExists)
+	t.Run("Messages", testMessagesExists)
 	t.Run("Users", testUsersExists)
 }
 
@@ -56,6 +61,7 @@ func TestFind(t *testing.T) {
 	t.Run("Channels", testChannelsFind)
 	t.Run("HubPermissions", testHubPermissionsFind)
 	t.Run("Hubs", testHubsFind)
+	t.Run("Messages", testMessagesFind)
 	t.Run("Users", testUsersFind)
 }
 
@@ -64,6 +70,7 @@ func TestBind(t *testing.T) {
 	t.Run("Channels", testChannelsBind)
 	t.Run("HubPermissions", testHubPermissionsBind)
 	t.Run("Hubs", testHubsBind)
+	t.Run("Messages", testMessagesBind)
 	t.Run("Users", testUsersBind)
 }
 
@@ -72,6 +79,7 @@ func TestOne(t *testing.T) {
 	t.Run("Channels", testChannelsOne)
 	t.Run("HubPermissions", testHubPermissionsOne)
 	t.Run("Hubs", testHubsOne)
+	t.Run("Messages", testMessagesOne)
 	t.Run("Users", testUsersOne)
 }
 
@@ -80,6 +88,7 @@ func TestAll(t *testing.T) {
 	t.Run("Channels", testChannelsAll)
 	t.Run("HubPermissions", testHubPermissionsAll)
 	t.Run("Hubs", testHubsAll)
+	t.Run("Messages", testMessagesAll)
 	t.Run("Users", testUsersAll)
 }
 
@@ -88,6 +97,7 @@ func TestCount(t *testing.T) {
 	t.Run("Channels", testChannelsCount)
 	t.Run("HubPermissions", testHubPermissionsCount)
 	t.Run("Hubs", testHubsCount)
+	t.Run("Messages", testMessagesCount)
 	t.Run("Users", testUsersCount)
 }
 
@@ -96,6 +106,7 @@ func TestHooks(t *testing.T) {
 	t.Run("Channels", testChannelsHooks)
 	t.Run("HubPermissions", testHubPermissionsHooks)
 	t.Run("Hubs", testHubsHooks)
+	t.Run("Messages", testMessagesHooks)
 	t.Run("Users", testUsersHooks)
 }
 
@@ -108,6 +119,8 @@ func TestInsert(t *testing.T) {
 	t.Run("HubPermissions", testHubPermissionsInsertWhitelist)
 	t.Run("Hubs", testHubsInsert)
 	t.Run("Hubs", testHubsInsertWhitelist)
+	t.Run("Messages", testMessagesInsert)
+	t.Run("Messages", testMessagesInsertWhitelist)
 	t.Run("Users", testUsersInsert)
 	t.Run("Users", testUsersInsertWhitelist)
 }
@@ -121,6 +134,9 @@ func TestToOne(t *testing.T) {
 	t.Run("HubPermissionToHubUsingHub", testHubPermissionToOneHubUsingHub)
 	t.Run("HubPermissionToUserUsingUser", testHubPermissionToOneUserUsingUser)
 	t.Run("HubToUserUsingCreatorUser", testHubToOneUserUsingCreatorUser)
+	t.Run("MessageToChannelUsingChannel", testMessageToOneChannelUsingChannel)
+	t.Run("MessageToHubUsingHub", testMessageToOneHubUsingHub)
+	t.Run("MessageToUserUsingUser", testMessageToOneUserUsingUser)
 }
 
 // TestOneToOne tests cannot be run in parallel
@@ -132,14 +148,17 @@ func TestOneToOne(t *testing.T) {}
 func TestToMany(t *testing.T) {
 	t.Run("ChannelToChannelPermissions", testChannelToManyChannelPermissions)
 	t.Run("ChannelToUsers", testChannelToManyUsers)
+	t.Run("ChannelToMessages", testChannelToManyMessages)
 	t.Run("HubToChannels", testHubToManyChannels)
 	t.Run("HubToHubPermissions", testHubToManyHubPermissions)
 	t.Run("HubToUsers", testHubToManyUsers)
+	t.Run("HubToMessages", testHubToManyMessages)
 	t.Run("UserToChannelPermissions", testUserToManyChannelPermissions)
 	t.Run("UserToChannels", testUserToManyChannels)
 	t.Run("UserToHubPermissions", testUserToManyHubPermissions)
 	t.Run("UserToHubs", testUserToManyHubs)
 	t.Run("UserToCreatorHubs", testUserToManyCreatorHubs)
+	t.Run("UserToMessages", testUserToManyMessages)
 }
 
 // TestToOneSet tests cannot be run in parallel
@@ -151,12 +170,18 @@ func TestToOneSet(t *testing.T) {
 	t.Run("HubPermissionToHubUsingHubPermissions", testHubPermissionToOneSetOpHubUsingHub)
 	t.Run("HubPermissionToUserUsingHubPermissions", testHubPermissionToOneSetOpUserUsingUser)
 	t.Run("HubToUserUsingCreatorHubs", testHubToOneSetOpUserUsingCreatorUser)
+	t.Run("MessageToChannelUsingMessages", testMessageToOneSetOpChannelUsingChannel)
+	t.Run("MessageToHubUsingMessages", testMessageToOneSetOpHubUsingHub)
+	t.Run("MessageToUserUsingMessages", testMessageToOneSetOpUserUsingUser)
 }
 
 // TestToOneRemove tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToOneRemove(t *testing.T) {
 	t.Run("HubToUserUsingCreatorHubs", testHubToOneRemoveOpUserUsingCreatorUser)
+	t.Run("MessageToChannelUsingMessages", testMessageToOneRemoveOpChannelUsingChannel)
+	t.Run("MessageToHubUsingMessages", testMessageToOneRemoveOpHubUsingHub)
+	t.Run("MessageToUserUsingMessages", testMessageToOneRemoveOpUserUsingUser)
 }
 
 // TestOneToOneSet tests cannot be run in parallel
@@ -172,34 +197,43 @@ func TestOneToOneRemove(t *testing.T) {}
 func TestToManyAdd(t *testing.T) {
 	t.Run("ChannelToChannelPermissions", testChannelToManyAddOpChannelPermissions)
 	t.Run("ChannelToUsers", testChannelToManyAddOpUsers)
+	t.Run("ChannelToMessages", testChannelToManyAddOpMessages)
 	t.Run("HubToChannels", testHubToManyAddOpChannels)
 	t.Run("HubToHubPermissions", testHubToManyAddOpHubPermissions)
 	t.Run("HubToUsers", testHubToManyAddOpUsers)
+	t.Run("HubToMessages", testHubToManyAddOpMessages)
 	t.Run("UserToChannelPermissions", testUserToManyAddOpChannelPermissions)
 	t.Run("UserToChannels", testUserToManyAddOpChannels)
 	t.Run("UserToHubPermissions", testUserToManyAddOpHubPermissions)
 	t.Run("UserToHubs", testUserToManyAddOpHubs)
 	t.Run("UserToCreatorHubs", testUserToManyAddOpCreatorHubs)
+	t.Run("UserToMessages", testUserToManyAddOpMessages)
 }
 
 // TestToManySet tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManySet(t *testing.T) {
 	t.Run("ChannelToUsers", testChannelToManySetOpUsers)
+	t.Run("ChannelToMessages", testChannelToManySetOpMessages)
 	t.Run("HubToUsers", testHubToManySetOpUsers)
+	t.Run("HubToMessages", testHubToManySetOpMessages)
 	t.Run("UserToChannels", testUserToManySetOpChannels)
 	t.Run("UserToHubs", testUserToManySetOpHubs)
 	t.Run("UserToCreatorHubs", testUserToManySetOpCreatorHubs)
+	t.Run("UserToMessages", testUserToManySetOpMessages)
 }
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManyRemove(t *testing.T) {
 	t.Run("ChannelToUsers", testChannelToManyRemoveOpUsers)
+	t.Run("ChannelToMessages", testChannelToManyRemoveOpMessages)
 	t.Run("HubToUsers", testHubToManyRemoveOpUsers)
+	t.Run("HubToMessages", testHubToManyRemoveOpMessages)
 	t.Run("UserToChannels", testUserToManyRemoveOpChannels)
 	t.Run("UserToHubs", testUserToManyRemoveOpHubs)
 	t.Run("UserToCreatorHubs", testUserToManyRemoveOpCreatorHubs)
+	t.Run("UserToMessages", testUserToManyRemoveOpMessages)
 }
 
 func TestReload(t *testing.T) {
@@ -207,6 +241,7 @@ func TestReload(t *testing.T) {
 	t.Run("Channels", testChannelsReload)
 	t.Run("HubPermissions", testHubPermissionsReload)
 	t.Run("Hubs", testHubsReload)
+	t.Run("Messages", testMessagesReload)
 	t.Run("Users", testUsersReload)
 }
 
@@ -215,6 +250,7 @@ func TestReloadAll(t *testing.T) {
 	t.Run("Channels", testChannelsReloadAll)
 	t.Run("HubPermissions", testHubPermissionsReloadAll)
 	t.Run("Hubs", testHubsReloadAll)
+	t.Run("Messages", testMessagesReloadAll)
 	t.Run("Users", testUsersReloadAll)
 }
 
@@ -223,6 +259,7 @@ func TestSelect(t *testing.T) {
 	t.Run("Channels", testChannelsSelect)
 	t.Run("HubPermissions", testHubPermissionsSelect)
 	t.Run("Hubs", testHubsSelect)
+	t.Run("Messages", testMessagesSelect)
 	t.Run("Users", testUsersSelect)
 }
 
@@ -231,6 +268,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("Channels", testChannelsUpdate)
 	t.Run("HubPermissions", testHubPermissionsUpdate)
 	t.Run("Hubs", testHubsUpdate)
+	t.Run("Messages", testMessagesUpdate)
 	t.Run("Users", testUsersUpdate)
 }
 
@@ -239,5 +277,6 @@ func TestSliceUpdateAll(t *testing.T) {
 	t.Run("Channels", testChannelsSliceUpdateAll)
 	t.Run("HubPermissions", testHubPermissionsSliceUpdateAll)
 	t.Run("Hubs", testHubsSliceUpdateAll)
+	t.Run("Messages", testMessagesSliceUpdateAll)
 	t.Run("Users", testUsersSliceUpdateAll)
 }

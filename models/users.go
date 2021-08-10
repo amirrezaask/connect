@@ -78,12 +78,14 @@ var UserRels = struct {
 	HubPermissions     string
 	Hubs               string
 	CreatorHubs        string
+	Messages           string
 }{
 	ChannelPermissions: "ChannelPermissions",
 	Channels:           "Channels",
 	HubPermissions:     "HubPermissions",
 	Hubs:               "Hubs",
 	CreatorHubs:        "CreatorHubs",
+	Messages:           "Messages",
 }
 
 // userR is where relationships are stored.
@@ -93,6 +95,7 @@ type userR struct {
 	HubPermissions     HubPermissionSlice     `boil:"HubPermissions" json:"HubPermissions" toml:"HubPermissions" yaml:"HubPermissions"`
 	Hubs               HubSlice               `boil:"Hubs" json:"Hubs" toml:"Hubs" yaml:"Hubs"`
 	CreatorHubs        HubSlice               `boil:"CreatorHubs" json:"CreatorHubs" toml:"CreatorHubs" yaml:"CreatorHubs"`
+	Messages           MessageSlice           `boil:"Messages" json:"Messages" toml:"Messages" yaml:"Messages"`
 }
 
 // NewStruct creates a new relationship struct
@@ -487,6 +490,27 @@ func (o *User) CreatorHubs(mods ...qm.QueryMod) hubQuery {
 
 	if len(queries.GetSelect(query.Query)) == 0 {
 		queries.SetSelect(query.Query, []string{"\"hubs\".*"})
+	}
+
+	return query
+}
+
+// Messages retrieves all the message's Messages with an executor.
+func (o *User) Messages(mods ...qm.QueryMod) messageQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"messages\".\"user_id\"=?", o.ID),
+	)
+
+	query := Messages(queryMods...)
+	queries.SetFrom(query.Query, "\"messages\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"messages\".*"})
 	}
 
 	return query
@@ -1016,6 +1040,104 @@ func (userL) LoadCreatorHubs(ctx context.Context, e boil.ContextExecutor, singul
 	return nil
 }
 
+// LoadMessages allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (userL) LoadMessages(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
+	var slice []*User
+	var object *User
+
+	if singular {
+		object = maybeUser.(*User)
+	} else {
+		slice = *maybeUser.(*[]*User)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &userR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &userR{}
+			}
+
+			for _, a := range args {
+				if queries.Equal(a, obj.ID) {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`messages`),
+		qm.WhereIn(`messages.user_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load messages")
+	}
+
+	var resultSlice []*Message
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice messages")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on messages")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for messages")
+	}
+
+	if len(messageAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Messages = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &messageR{}
+			}
+			foreign.R.User = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.UserID) {
+				local.R.Messages = append(local.R.Messages, foreign)
+				if foreign.R == nil {
+					foreign.R = &messageR{}
+				}
+				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // AddChannelPermissions adds the given related objects to the existing relationships
 // of the user, optionally inserting them as new records.
 // Appends related to o.R.ChannelPermissions.
@@ -1530,6 +1652,133 @@ func (o *User) RemoveCreatorHubs(ctx context.Context, exec boil.ContextExecutor,
 				o.R.CreatorHubs[i] = o.R.CreatorHubs[ln-1]
 			}
 			o.R.CreatorHubs = o.R.CreatorHubs[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddMessages adds the given related objects to the existing relationships
+// of the user, optionally inserting them as new records.
+// Appends related to o.R.Messages.
+// Sets related.R.User appropriately.
+func (o *User) AddMessages(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Message) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.UserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"messages\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, messagePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.UserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &userR{
+			Messages: related,
+		}
+	} else {
+		o.R.Messages = append(o.R.Messages, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &messageR{
+				User: o,
+			}
+		} else {
+			rel.R.User = o
+		}
+	}
+	return nil
+}
+
+// SetMessages removes all previously related items of the
+// user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.User's Messages accordingly.
+// Replaces o.R.Messages with related.
+// Sets related.R.User's Messages accordingly.
+func (o *User) SetMessages(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Message) error {
+	query := "update \"messages\" set \"user_id\" = null where \"user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.Messages {
+			queries.SetScanner(&rel.UserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.User = nil
+		}
+
+		o.R.Messages = nil
+	}
+	return o.AddMessages(ctx, exec, insert, related...)
+}
+
+// RemoveMessages relationships from objects passed in.
+// Removes related items from R.Messages (uses pointer comparison, removal does not keep order)
+// Sets related.R.User.
+func (o *User) RemoveMessages(ctx context.Context, exec boil.ContextExecutor, related ...*Message) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.UserID, nil)
+		if rel.R != nil {
+			rel.R.User = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.Messages {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.Messages)
+			if ln > 1 && i < ln-1 {
+				o.R.Messages[i] = o.R.Messages[ln-1]
+			}
+			o.R.Messages = o.R.Messages[:ln-1]
 			break
 		}
 	}

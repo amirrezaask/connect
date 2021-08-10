@@ -76,6 +76,9 @@ func (c *WSHandler) NewMessageEventHandler() func(e *domain.Event) error {
 				c.Logger.Errorf("error in unmarshaling new message payload: %v", err)
 				return nil
 			}
+			// save message into database
+			go func(db *sql.DB) {
+			}(c.DB)
 			c.Users.Get(p.Receiver).WriteJSON(e)
 		}
 		return nil

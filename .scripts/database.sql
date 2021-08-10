@@ -60,5 +60,13 @@ CREATE TABLE IF NOT EXISTS channel_permissions (
     primary key(user_id, channel_id, role_name)
 );
 
+CREATE TABLE IF NOT EXISTS messages(
+    id varchar(255) primary key,
+    user_id varchar(255) REFERENCES users(id),
+    channel_id varchar(255) REFERENCES channels(id),
+    hub_id varchar(255) REFERENCES hubs(id),
+    payload varchar(255)
+);
+
 
 

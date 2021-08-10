@@ -99,10 +99,12 @@ var ChannelRels = struct {
 	Hub                string
 	ChannelPermissions string
 	Users              string
+	Messages           string
 }{
 	Hub:                "Hub",
 	ChannelPermissions: "ChannelPermissions",
 	Users:              "Users",
+	Messages:           "Messages",
 }
 
 // channelR is where relationships are stored.
@@ -110,6 +112,7 @@ type channelR struct {
 	Hub                *Hub                   `boil:"Hub" json:"Hub" toml:"Hub" yaml:"Hub"`
 	ChannelPermissions ChannelPermissionSlice `boil:"ChannelPermissions" json:"ChannelPermissions" toml:"ChannelPermissions" yaml:"ChannelPermissions"`
 	Users              UserSlice              `boil:"Users" json:"Users" toml:"Users" yaml:"Users"`
+	Messages           MessageSlice           `boil:"Messages" json:"Messages" toml:"Messages" yaml:"Messages"`
 }
 
 // NewStruct creates a new relationship struct
@@ -459,6 +462,27 @@ func (o *Channel) Users(mods ...qm.QueryMod) userQuery {
 	return query
 }
 
+// Messages retrieves all the message's Messages with an executor.
+func (o *Channel) Messages(mods ...qm.QueryMod) messageQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"messages\".\"channel_id\"=?", o.ID),
+	)
+
+	query := Messages(queryMods...)
+	queries.SetFrom(query.Query, "\"messages\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"messages\".*"})
+	}
+
+	return query
+}
+
 // LoadHub allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (channelL) LoadHub(ctx context.Context, e boil.ContextExecutor, singular bool, maybeChannel interface{}, mods queries.Applicator) error {
@@ -776,6 +800,104 @@ func (channelL) LoadUsers(ctx context.Context, e boil.ContextExecutor, singular 
 	return nil
 }
 
+// LoadMessages allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (channelL) LoadMessages(ctx context.Context, e boil.ContextExecutor, singular bool, maybeChannel interface{}, mods queries.Applicator) error {
+	var slice []*Channel
+	var object *Channel
+
+	if singular {
+		object = maybeChannel.(*Channel)
+	} else {
+		slice = *maybeChannel.(*[]*Channel)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &channelR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &channelR{}
+			}
+
+			for _, a := range args {
+				if queries.Equal(a, obj.ID) {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`messages`),
+		qm.WhereIn(`messages.channel_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load messages")
+	}
+
+	var resultSlice []*Message
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice messages")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on messages")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for messages")
+	}
+
+	if len(messageAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.Messages = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &messageR{}
+			}
+			foreign.R.Channel = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.ChannelID) {
+				local.R.Messages = append(local.R.Messages, foreign)
+				if foreign.R == nil {
+					foreign.R = &messageR{}
+				}
+				foreign.R.Channel = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetHub of the channel to the related item.
 // Sets o.R.Hub to related.
 // Adds o to related.R.Channels.
@@ -1018,6 +1140,133 @@ func removeUsersFromChannelsSlice(o *Channel, related []*User) {
 			break
 		}
 	}
+}
+
+// AddMessages adds the given related objects to the existing relationships
+// of the channel, optionally inserting them as new records.
+// Appends related to o.R.Messages.
+// Sets related.R.Channel appropriately.
+func (o *Channel) AddMessages(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Message) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.ChannelID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"messages\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"channel_id"}),
+				strmangle.WhereClause("\"", "\"", 2, messagePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.ChannelID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &channelR{
+			Messages: related,
+		}
+	} else {
+		o.R.Messages = append(o.R.Messages, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &messageR{
+				Channel: o,
+			}
+		} else {
+			rel.R.Channel = o
+		}
+	}
+	return nil
+}
+
+// SetMessages removes all previously related items of the
+// channel replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.Channel's Messages accordingly.
+// Replaces o.R.Messages with related.
+// Sets related.R.Channel's Messages accordingly.
+func (o *Channel) SetMessages(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Message) error {
+	query := "update \"messages\" set \"channel_id\" = null where \"channel_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.Messages {
+			queries.SetScanner(&rel.ChannelID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.Channel = nil
+		}
+
+		o.R.Messages = nil
+	}
+	return o.AddMessages(ctx, exec, insert, related...)
+}
+
+// RemoveMessages relationships from objects passed in.
+// Removes related items from R.Messages (uses pointer comparison, removal does not keep order)
+// Sets related.R.Channel.
+func (o *Channel) RemoveMessages(ctx context.Context, exec boil.ContextExecutor, related ...*Message) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.ChannelID, nil)
+		if rel.R != nil {
+			rel.R.Channel = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("channel_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.Messages {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.Messages)
+			if ln > 1 && i < ln-1 {
+				o.R.Messages[i] = o.R.Messages[ln-1]
+			}
+			o.R.Messages = o.R.Messages[:ln-1]
+			break
+		}
+	}
+
+	return nil
 }
 
 // Channels retrieves all the records using an executor.
