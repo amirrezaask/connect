@@ -6,6 +6,7 @@ require (
 	github.com/friendsofgo/errors v0.9.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golobby/config/v2 v2.1.4
+	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/kat-co/vala v0.0.0-20170210184112-42e1d8b61f12
 	github.com/labstack/echo/v4 v4.5.0

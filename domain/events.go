@@ -1,4 +1,4 @@
-package domain 
+package domain
 
 type EventType string
 
@@ -12,11 +12,10 @@ const (
 type Event struct {
 	Creator   string
 	EventType EventType `json:"event_type"`
+	ChannelID string    `json:"channel_id"`
 	Payload   []byte    `json:"payload"`
 }
 
 type NewMessagePayload struct {
-	Sender   string `json:"sender"`
-	Receiver string `json:"receiver"`
-	Body     string `json:"body"`
+	Body string `json:"body"`
 }

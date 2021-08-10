@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -24,11 +23,10 @@ import (
 
 // Message is an object representing the database table.
 type Message struct {
-	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UserID    null.String `boil:"user_id" json:"user_id,omitempty" toml:"user_id" yaml:"user_id,omitempty"`
-	ChannelID null.String `boil:"channel_id" json:"channel_id,omitempty" toml:"channel_id" yaml:"channel_id,omitempty"`
-	HubID     null.String `boil:"hub_id" json:"hub_id,omitempty" toml:"hub_id" yaml:"hub_id,omitempty"`
-	Payload   null.String `boil:"payload" json:"payload,omitempty" toml:"payload" yaml:"payload,omitempty"`
+	ID        string `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UserID    string `boil:"user_id" json:"user_id" toml:"user_id" yaml:"user_id"`
+	ChannelID string `boil:"channel_id" json:"channel_id" toml:"channel_id" yaml:"channel_id"`
+	Payload   string `boil:"payload" json:"payload" toml:"payload" yaml:"payload"`
 
 	R *messageR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L messageL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -38,13 +36,11 @@ var MessageColumns = struct {
 	ID        string
 	UserID    string
 	ChannelID string
-	HubID     string
 	Payload   string
 }{
 	ID:        "id",
 	UserID:    "user_id",
 	ChannelID: "channel_id",
-	HubID:     "hub_id",
 	Payload:   "payload",
 }
 
@@ -52,13 +48,11 @@ var MessageTableColumns = struct {
 	ID        string
 	UserID    string
 	ChannelID string
-	HubID     string
 	Payload   string
 }{
 	ID:        "messages.id",
 	UserID:    "messages.user_id",
 	ChannelID: "messages.channel_id",
-	HubID:     "messages.hub_id",
 	Payload:   "messages.payload",
 }
 
@@ -66,33 +60,28 @@ var MessageTableColumns = struct {
 
 var MessageWhere = struct {
 	ID        whereHelperstring
-	UserID    whereHelpernull_String
-	ChannelID whereHelpernull_String
-	HubID     whereHelpernull_String
-	Payload   whereHelpernull_String
+	UserID    whereHelperstring
+	ChannelID whereHelperstring
+	Payload   whereHelperstring
 }{
 	ID:        whereHelperstring{field: "\"messages\".\"id\""},
-	UserID:    whereHelpernull_String{field: "\"messages\".\"user_id\""},
-	ChannelID: whereHelpernull_String{field: "\"messages\".\"channel_id\""},
-	HubID:     whereHelpernull_String{field: "\"messages\".\"hub_id\""},
-	Payload:   whereHelpernull_String{field: "\"messages\".\"payload\""},
+	UserID:    whereHelperstring{field: "\"messages\".\"user_id\""},
+	ChannelID: whereHelperstring{field: "\"messages\".\"channel_id\""},
+	Payload:   whereHelperstring{field: "\"messages\".\"payload\""},
 }
 
 // MessageRels is where relationship names are stored.
 var MessageRels = struct {
 	Channel string
-	Hub     string
 	User    string
 }{
 	Channel: "Channel",
-	Hub:     "Hub",
 	User:    "User",
 }
 
 // messageR is where relationships are stored.
 type messageR struct {
 	Channel *Channel `boil:"Channel" json:"Channel" toml:"Channel" yaml:"Channel"`
-	Hub     *Hub     `boil:"Hub" json:"Hub" toml:"Hub" yaml:"Hub"`
 	User    *User    `boil:"User" json:"User" toml:"User" yaml:"User"`
 }
 
@@ -105,8 +94,8 @@ func (*messageR) NewStruct() *messageR {
 type messageL struct{}
 
 var (
-	messageAllColumns            = []string{"id", "user_id", "channel_id", "hub_id", "payload"}
-	messageColumnsWithoutDefault = []string{"id", "user_id", "channel_id", "hub_id", "payload"}
+	messageAllColumns            = []string{"id", "user_id", "channel_id", "payload"}
+	messageColumnsWithoutDefault = []string{"id", "user_id", "channel_id", "payload"}
 	messageColumnsWithDefault    = []string{}
 	messagePrimaryKeyColumns     = []string{"id"}
 )
@@ -400,20 +389,6 @@ func (o *Message) Channel(mods ...qm.QueryMod) channelQuery {
 	return query
 }
 
-// Hub pointed to by the foreign key.
-func (o *Message) Hub(mods ...qm.QueryMod) hubQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.HubID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	query := Hubs(queryMods...)
-	queries.SetFrom(query.Query, "\"hubs\"")
-
-	return query
-}
-
 // User pointed to by the foreign key.
 func (o *Message) User(mods ...qm.QueryMod) userQuery {
 	queryMods := []qm.QueryMod{
@@ -445,9 +420,7 @@ func (messageL) LoadChannel(ctx context.Context, e boil.ContextExecutor, singula
 		if object.R == nil {
 			object.R = &messageR{}
 		}
-		if !queries.IsNil(object.ChannelID) {
-			args = append(args, object.ChannelID)
-		}
+		args = append(args, object.ChannelID)
 
 	} else {
 	Outer:
@@ -457,14 +430,12 @@ func (messageL) LoadChannel(ctx context.Context, e boil.ContextExecutor, singula
 			}
 
 			for _, a := range args {
-				if queries.Equal(a, obj.ChannelID) {
+				if a == obj.ChannelID {
 					continue Outer
 				}
 			}
 
-			if !queries.IsNil(obj.ChannelID) {
-				args = append(args, obj.ChannelID)
-			}
+			args = append(args, obj.ChannelID)
 
 		}
 	}
@@ -522,118 +493,10 @@ func (messageL) LoadChannel(ctx context.Context, e boil.ContextExecutor, singula
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.ChannelID, foreign.ID) {
+			if local.ChannelID == foreign.ID {
 				local.R.Channel = foreign
 				if foreign.R == nil {
 					foreign.R = &channelR{}
-				}
-				foreign.R.Messages = append(foreign.R.Messages, local)
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
-// LoadHub allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (messageL) LoadHub(ctx context.Context, e boil.ContextExecutor, singular bool, maybeMessage interface{}, mods queries.Applicator) error {
-	var slice []*Message
-	var object *Message
-
-	if singular {
-		object = maybeMessage.(*Message)
-	} else {
-		slice = *maybeMessage.(*[]*Message)
-	}
-
-	args := make([]interface{}, 0, 1)
-	if singular {
-		if object.R == nil {
-			object.R = &messageR{}
-		}
-		if !queries.IsNil(object.HubID) {
-			args = append(args, object.HubID)
-		}
-
-	} else {
-	Outer:
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &messageR{}
-			}
-
-			for _, a := range args {
-				if queries.Equal(a, obj.HubID) {
-					continue Outer
-				}
-			}
-
-			if !queries.IsNil(obj.HubID) {
-				args = append(args, obj.HubID)
-			}
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	query := NewQuery(
-		qm.From(`hubs`),
-		qm.WhereIn(`hubs.id in ?`, args...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Hub")
-	}
-
-	var resultSlice []*Hub
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Hub")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for hubs")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for hubs")
-	}
-
-	if len(messageAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Hub = foreign
-		if foreign.R == nil {
-			foreign.R = &hubR{}
-		}
-		foreign.R.Messages = append(foreign.R.Messages, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if queries.Equal(local.HubID, foreign.ID) {
-				local.R.Hub = foreign
-				if foreign.R == nil {
-					foreign.R = &hubR{}
 				}
 				foreign.R.Messages = append(foreign.R.Messages, local)
 				break
@@ -661,9 +524,7 @@ func (messageL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 		if object.R == nil {
 			object.R = &messageR{}
 		}
-		if !queries.IsNil(object.UserID) {
-			args = append(args, object.UserID)
-		}
+		args = append(args, object.UserID)
 
 	} else {
 	Outer:
@@ -673,14 +534,12 @@ func (messageL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 			}
 
 			for _, a := range args {
-				if queries.Equal(a, obj.UserID) {
+				if a == obj.UserID {
 					continue Outer
 				}
 			}
 
-			if !queries.IsNil(obj.UserID) {
-				args = append(args, obj.UserID)
-			}
+			args = append(args, obj.UserID)
 
 		}
 	}
@@ -738,7 +597,7 @@ func (messageL) LoadUser(ctx context.Context, e boil.ContextExecutor, singular b
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.UserID, foreign.ID) {
+			if local.UserID == foreign.ID {
 				local.R.User = foreign
 				if foreign.R == nil {
 					foreign.R = &userR{}
@@ -779,7 +638,7 @@ func (o *Message) SetChannel(ctx context.Context, exec boil.ContextExecutor, ins
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.ChannelID, related.ID)
+	o.ChannelID = related.ID
 	if o.R == nil {
 		o.R = &messageR{
 			Channel: related,
@@ -796,119 +655,6 @@ func (o *Message) SetChannel(ctx context.Context, exec boil.ContextExecutor, ins
 		related.R.Messages = append(related.R.Messages, o)
 	}
 
-	return nil
-}
-
-// RemoveChannel relationship.
-// Sets o.R.Channel to nil.
-// Removes o from all passed in related items' relationships struct (Optional).
-func (o *Message) RemoveChannel(ctx context.Context, exec boil.ContextExecutor, related *Channel) error {
-	var err error
-
-	queries.SetScanner(&o.ChannelID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("channel_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.Channel = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.Messages {
-		if queries.Equal(o.ChannelID, ri.ChannelID) {
-			continue
-		}
-
-		ln := len(related.R.Messages)
-		if ln > 1 && i < ln-1 {
-			related.R.Messages[i] = related.R.Messages[ln-1]
-		}
-		related.R.Messages = related.R.Messages[:ln-1]
-		break
-	}
-	return nil
-}
-
-// SetHub of the message to the related item.
-// Sets o.R.Hub to related.
-// Adds o to related.R.Messages.
-func (o *Message) SetHub(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Hub) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"messages\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"hub_id"}),
-		strmangle.WhereClause("\"", "\"", 2, messagePrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	queries.Assign(&o.HubID, related.ID)
-	if o.R == nil {
-		o.R = &messageR{
-			Hub: related,
-		}
-	} else {
-		o.R.Hub = related
-	}
-
-	if related.R == nil {
-		related.R = &hubR{
-			Messages: MessageSlice{o},
-		}
-	} else {
-		related.R.Messages = append(related.R.Messages, o)
-	}
-
-	return nil
-}
-
-// RemoveHub relationship.
-// Sets o.R.Hub to nil.
-// Removes o from all passed in related items' relationships struct (Optional).
-func (o *Message) RemoveHub(ctx context.Context, exec boil.ContextExecutor, related *Hub) error {
-	var err error
-
-	queries.SetScanner(&o.HubID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("hub_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.Hub = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.Messages {
-		if queries.Equal(o.HubID, ri.HubID) {
-			continue
-		}
-
-		ln := len(related.R.Messages)
-		if ln > 1 && i < ln-1 {
-			related.R.Messages[i] = related.R.Messages[ln-1]
-		}
-		related.R.Messages = related.R.Messages[:ln-1]
-		break
-	}
 	return nil
 }
 
@@ -939,7 +685,7 @@ func (o *Message) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.UserID, related.ID)
+	o.UserID = related.ID
 	if o.R == nil {
 		o.R = &messageR{
 			User: related,
@@ -956,39 +702,6 @@ func (o *Message) SetUser(ctx context.Context, exec boil.ContextExecutor, insert
 		related.R.Messages = append(related.R.Messages, o)
 	}
 
-	return nil
-}
-
-// RemoveUser relationship.
-// Sets o.R.User to nil.
-// Removes o from all passed in related items' relationships struct (Optional).
-func (o *Message) RemoveUser(ctx context.Context, exec boil.ContextExecutor, related *User) error {
-	var err error
-
-	queries.SetScanner(&o.UserID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("user_id")); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	if o.R != nil {
-		o.R.User = nil
-	}
-	if related == nil || related.R == nil {
-		return nil
-	}
-
-	for i, ri := range related.R.Messages {
-		if queries.Equal(o.UserID, ri.UserID) {
-			continue
-		}
-
-		ln := len(related.R.Messages)
-		if ln > 1 && i < ln-1 {
-			related.R.Messages[i] = related.R.Messages[ln-1]
-		}
-		related.R.Messages = related.R.Messages[:ln-1]
-		break
-	}
 	return nil
 }
 

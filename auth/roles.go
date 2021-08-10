@@ -3,9 +3,18 @@ package auth
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/amirrezaask/connect/models"
 )
+
+const (
+	ROLE_CHANNEL_WRITE = "channel_text_write"
+)
+
+func Unauthorized(userID string, channelID string) error {
+	return fmt.Errorf("user %s is trying something Unauthorized in %s", userID, channelID)
+}
 
 type RoleManager struct {
 	DB *sql.DB

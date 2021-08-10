@@ -503,7 +503,7 @@ func testMessageToOneChannelUsingChannel(t *testing.T) {
 	var foreign Channel
 
 	seed := randomize.NewSeed()
-	if err := randomize.Struct(seed, &local, messageDBTypes, true, messageColumnsWithDefault...); err != nil {
+	if err := randomize.Struct(seed, &local, messageDBTypes, false, messageColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Message struct: %s", err)
 	}
 	if err := randomize.Struct(seed, &foreign, channelDBTypes, false, channelColumnsWithDefault...); err != nil {
@@ -514,7 +514,7 @@ func testMessageToOneChannelUsingChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries.Assign(&local.ChannelID, foreign.ID)
+	local.ChannelID = foreign.ID
 	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
@@ -524,7 +524,7 @@ func testMessageToOneChannelUsingChannel(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !queries.Equal(check.ID, foreign.ID) {
+	if check.ID != foreign.ID {
 		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
 	}
 
@@ -545,57 +545,6 @@ func testMessageToOneChannelUsingChannel(t *testing.T) {
 	}
 }
 
-func testMessageToOneHubUsingHub(t *testing.T) {
-	ctx := context.Background()
-	tx := MustTx(boil.BeginTx(ctx, nil))
-	defer func() { _ = tx.Rollback() }()
-
-	var local Message
-	var foreign Hub
-
-	seed := randomize.NewSeed()
-	if err := randomize.Struct(seed, &local, messageDBTypes, true, messageColumnsWithDefault...); err != nil {
-		t.Errorf("Unable to randomize Message struct: %s", err)
-	}
-	if err := randomize.Struct(seed, &foreign, hubDBTypes, false, hubColumnsWithDefault...); err != nil {
-		t.Errorf("Unable to randomize Hub struct: %s", err)
-	}
-
-	if err := foreign.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	queries.Assign(&local.HubID, foreign.ID)
-	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	check, err := local.Hub().One(ctx, tx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !queries.Equal(check.ID, foreign.ID) {
-		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
-	}
-
-	slice := MessageSlice{&local}
-	if err = local.L.LoadHub(ctx, tx, false, (*[]*Message)(&slice), nil); err != nil {
-		t.Fatal(err)
-	}
-	if local.R.Hub == nil {
-		t.Error("struct should have been eager loaded")
-	}
-
-	local.R.Hub = nil
-	if err = local.L.LoadHub(ctx, tx, true, &local, nil); err != nil {
-		t.Fatal(err)
-	}
-	if local.R.Hub == nil {
-		t.Error("struct should have been eager loaded")
-	}
-}
-
 func testMessageToOneUserUsingUser(t *testing.T) {
 	ctx := context.Background()
 	tx := MustTx(boil.BeginTx(ctx, nil))
@@ -605,7 +554,7 @@ func testMessageToOneUserUsingUser(t *testing.T) {
 	var foreign User
 
 	seed := randomize.NewSeed()
-	if err := randomize.Struct(seed, &local, messageDBTypes, true, messageColumnsWithDefault...); err != nil {
+	if err := randomize.Struct(seed, &local, messageDBTypes, false, messageColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Message struct: %s", err)
 	}
 	if err := randomize.Struct(seed, &foreign, userDBTypes, false, userColumnsWithDefault...); err != nil {
@@ -616,7 +565,7 @@ func testMessageToOneUserUsingUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries.Assign(&local.UserID, foreign.ID)
+	local.UserID = foreign.ID
 	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
@@ -626,7 +575,7 @@ func testMessageToOneUserUsingUser(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !queries.Equal(check.ID, foreign.ID) {
+	if check.ID != foreign.ID {
 		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
 	}
 
@@ -688,7 +637,7 @@ func testMessageToOneSetOpChannelUsingChannel(t *testing.T) {
 		if x.R.Messages[0] != &a {
 			t.Error("failed to append to foreign relationship struct")
 		}
-		if !queries.Equal(a.ChannelID, x.ID) {
+		if a.ChannelID != x.ID {
 			t.Error("foreign key was wrong value", a.ChannelID)
 		}
 
@@ -699,172 +648,11 @@ func testMessageToOneSetOpChannelUsingChannel(t *testing.T) {
 			t.Fatal("failed to reload", err)
 		}
 
-		if !queries.Equal(a.ChannelID, x.ID) {
+		if a.ChannelID != x.ID {
 			t.Error("foreign key was wrong value", a.ChannelID, x.ID)
 		}
 	}
 }
-
-func testMessageToOneRemoveOpChannelUsingChannel(t *testing.T) {
-	var err error
-
-	ctx := context.Background()
-	tx := MustTx(boil.BeginTx(ctx, nil))
-	defer func() { _ = tx.Rollback() }()
-
-	var a Message
-	var b Channel
-
-	seed := randomize.NewSeed()
-	if err = randomize.Struct(seed, &a, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-	if err = randomize.Struct(seed, &b, channelDBTypes, false, strmangle.SetComplement(channelPrimaryKeyColumns, channelColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.SetChannel(ctx, tx, true, &b); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.RemoveChannel(ctx, tx, &b); err != nil {
-		t.Error("failed to remove relationship")
-	}
-
-	count, err := a.Channel().Count(ctx, tx)
-	if err != nil {
-		t.Error(err)
-	}
-	if count != 0 {
-		t.Error("want no relationships remaining")
-	}
-
-	if a.R.Channel != nil {
-		t.Error("R struct entry should be nil")
-	}
-
-	if !queries.IsValuerNil(a.ChannelID) {
-		t.Error("foreign key value should be nil")
-	}
-
-	if len(b.R.Messages) != 0 {
-		t.Error("failed to remove a from b's relationships")
-	}
-}
-
-func testMessageToOneSetOpHubUsingHub(t *testing.T) {
-	var err error
-
-	ctx := context.Background()
-	tx := MustTx(boil.BeginTx(ctx, nil))
-	defer func() { _ = tx.Rollback() }()
-
-	var a Message
-	var b, c Hub
-
-	seed := randomize.NewSeed()
-	if err = randomize.Struct(seed, &a, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-	if err = randomize.Struct(seed, &b, hubDBTypes, false, strmangle.SetComplement(hubPrimaryKeyColumns, hubColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-	if err = randomize.Struct(seed, &c, hubDBTypes, false, strmangle.SetComplement(hubPrimaryKeyColumns, hubColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	for i, x := range []*Hub{&b, &c} {
-		err = a.SetHub(ctx, tx, i != 0, x)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if a.R.Hub != x {
-			t.Error("relationship struct not set to correct value")
-		}
-
-		if x.R.Messages[0] != &a {
-			t.Error("failed to append to foreign relationship struct")
-		}
-		if !queries.Equal(a.HubID, x.ID) {
-			t.Error("foreign key was wrong value", a.HubID)
-		}
-
-		zero := reflect.Zero(reflect.TypeOf(a.HubID))
-		reflect.Indirect(reflect.ValueOf(&a.HubID)).Set(zero)
-
-		if err = a.Reload(ctx, tx); err != nil {
-			t.Fatal("failed to reload", err)
-		}
-
-		if !queries.Equal(a.HubID, x.ID) {
-			t.Error("foreign key was wrong value", a.HubID, x.ID)
-		}
-	}
-}
-
-func testMessageToOneRemoveOpHubUsingHub(t *testing.T) {
-	var err error
-
-	ctx := context.Background()
-	tx := MustTx(boil.BeginTx(ctx, nil))
-	defer func() { _ = tx.Rollback() }()
-
-	var a Message
-	var b Hub
-
-	seed := randomize.NewSeed()
-	if err = randomize.Struct(seed, &a, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-	if err = randomize.Struct(seed, &b, hubDBTypes, false, strmangle.SetComplement(hubPrimaryKeyColumns, hubColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.SetHub(ctx, tx, true, &b); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.RemoveHub(ctx, tx, &b); err != nil {
-		t.Error("failed to remove relationship")
-	}
-
-	count, err := a.Hub().Count(ctx, tx)
-	if err != nil {
-		t.Error(err)
-	}
-	if count != 0 {
-		t.Error("want no relationships remaining")
-	}
-
-	if a.R.Hub != nil {
-		t.Error("R struct entry should be nil")
-	}
-
-	if !queries.IsValuerNil(a.HubID) {
-		t.Error("foreign key value should be nil")
-	}
-
-	if len(b.R.Messages) != 0 {
-		t.Error("failed to remove a from b's relationships")
-	}
-}
-
 func testMessageToOneSetOpUserUsingUser(t *testing.T) {
 	var err error
 
@@ -906,7 +694,7 @@ func testMessageToOneSetOpUserUsingUser(t *testing.T) {
 		if x.R.Messages[0] != &a {
 			t.Error("failed to append to foreign relationship struct")
 		}
-		if !queries.Equal(a.UserID, x.ID) {
+		if a.UserID != x.ID {
 			t.Error("foreign key was wrong value", a.UserID)
 		}
 
@@ -917,60 +705,9 @@ func testMessageToOneSetOpUserUsingUser(t *testing.T) {
 			t.Fatal("failed to reload", err)
 		}
 
-		if !queries.Equal(a.UserID, x.ID) {
+		if a.UserID != x.ID {
 			t.Error("foreign key was wrong value", a.UserID, x.ID)
 		}
-	}
-}
-
-func testMessageToOneRemoveOpUserUsingUser(t *testing.T) {
-	var err error
-
-	ctx := context.Background()
-	tx := MustTx(boil.BeginTx(ctx, nil))
-	defer func() { _ = tx.Rollback() }()
-
-	var a Message
-	var b User
-
-	seed := randomize.NewSeed()
-	if err = randomize.Struct(seed, &a, messageDBTypes, false, strmangle.SetComplement(messagePrimaryKeyColumns, messageColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-	if err = randomize.Struct(seed, &b, userDBTypes, false, strmangle.SetComplement(userPrimaryKeyColumns, userColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.SetUser(ctx, tx, true, &b); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.RemoveUser(ctx, tx, &b); err != nil {
-		t.Error("failed to remove relationship")
-	}
-
-	count, err := a.User().Count(ctx, tx)
-	if err != nil {
-		t.Error(err)
-	}
-	if count != 0 {
-		t.Error("want no relationships remaining")
-	}
-
-	if a.R.User != nil {
-		t.Error("R struct entry should be nil")
-	}
-
-	if !queries.IsValuerNil(a.UserID) {
-		t.Error("foreign key value should be nil")
-	}
-
-	if len(b.R.Messages) != 0 {
-		t.Error("failed to remove a from b's relationships")
 	}
 }
 
@@ -1048,7 +785,7 @@ func testMessagesSelect(t *testing.T) {
 }
 
 var (
-	messageDBTypes = map[string]string{`ID`: `character varying`, `UserID`: `character varying`, `ChannelID`: `character varying`, `HubID`: `character varying`, `Payload`: `character varying`}
+	messageDBTypes = map[string]string{`ID`: `character varying`, `UserID`: `character varying`, `ChannelID`: `character varying`, `Payload`: `character varying`}
 	_              = bytes.MinRead
 )
 

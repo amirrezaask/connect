@@ -135,7 +135,6 @@ func TestToOne(t *testing.T) {
 	t.Run("HubPermissionToUserUsingUser", testHubPermissionToOneUserUsingUser)
 	t.Run("HubToUserUsingCreatorUser", testHubToOneUserUsingCreatorUser)
 	t.Run("MessageToChannelUsingChannel", testMessageToOneChannelUsingChannel)
-	t.Run("MessageToHubUsingHub", testMessageToOneHubUsingHub)
 	t.Run("MessageToUserUsingUser", testMessageToOneUserUsingUser)
 }
 
@@ -152,7 +151,6 @@ func TestToMany(t *testing.T) {
 	t.Run("HubToChannels", testHubToManyChannels)
 	t.Run("HubToHubPermissions", testHubToManyHubPermissions)
 	t.Run("HubToUsers", testHubToManyUsers)
-	t.Run("HubToMessages", testHubToManyMessages)
 	t.Run("UserToChannelPermissions", testUserToManyChannelPermissions)
 	t.Run("UserToChannels", testUserToManyChannels)
 	t.Run("UserToHubPermissions", testUserToManyHubPermissions)
@@ -171,7 +169,6 @@ func TestToOneSet(t *testing.T) {
 	t.Run("HubPermissionToUserUsingHubPermissions", testHubPermissionToOneSetOpUserUsingUser)
 	t.Run("HubToUserUsingCreatorHubs", testHubToOneSetOpUserUsingCreatorUser)
 	t.Run("MessageToChannelUsingMessages", testMessageToOneSetOpChannelUsingChannel)
-	t.Run("MessageToHubUsingMessages", testMessageToOneSetOpHubUsingHub)
 	t.Run("MessageToUserUsingMessages", testMessageToOneSetOpUserUsingUser)
 }
 
@@ -179,9 +176,6 @@ func TestToOneSet(t *testing.T) {
 // or deadlocks can occur.
 func TestToOneRemove(t *testing.T) {
 	t.Run("HubToUserUsingCreatorHubs", testHubToOneRemoveOpUserUsingCreatorUser)
-	t.Run("MessageToChannelUsingMessages", testMessageToOneRemoveOpChannelUsingChannel)
-	t.Run("MessageToHubUsingMessages", testMessageToOneRemoveOpHubUsingHub)
-	t.Run("MessageToUserUsingMessages", testMessageToOneRemoveOpUserUsingUser)
 }
 
 // TestOneToOneSet tests cannot be run in parallel
@@ -201,7 +195,6 @@ func TestToManyAdd(t *testing.T) {
 	t.Run("HubToChannels", testHubToManyAddOpChannels)
 	t.Run("HubToHubPermissions", testHubToManyAddOpHubPermissions)
 	t.Run("HubToUsers", testHubToManyAddOpUsers)
-	t.Run("HubToMessages", testHubToManyAddOpMessages)
 	t.Run("UserToChannelPermissions", testUserToManyAddOpChannelPermissions)
 	t.Run("UserToChannels", testUserToManyAddOpChannels)
 	t.Run("UserToHubPermissions", testUserToManyAddOpHubPermissions)
@@ -214,26 +207,20 @@ func TestToManyAdd(t *testing.T) {
 // or deadlocks can occur.
 func TestToManySet(t *testing.T) {
 	t.Run("ChannelToUsers", testChannelToManySetOpUsers)
-	t.Run("ChannelToMessages", testChannelToManySetOpMessages)
 	t.Run("HubToUsers", testHubToManySetOpUsers)
-	t.Run("HubToMessages", testHubToManySetOpMessages)
 	t.Run("UserToChannels", testUserToManySetOpChannels)
 	t.Run("UserToHubs", testUserToManySetOpHubs)
 	t.Run("UserToCreatorHubs", testUserToManySetOpCreatorHubs)
-	t.Run("UserToMessages", testUserToManySetOpMessages)
 }
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManyRemove(t *testing.T) {
 	t.Run("ChannelToUsers", testChannelToManyRemoveOpUsers)
-	t.Run("ChannelToMessages", testChannelToManyRemoveOpMessages)
 	t.Run("HubToUsers", testHubToManyRemoveOpUsers)
-	t.Run("HubToMessages", testHubToManyRemoveOpMessages)
 	t.Run("UserToChannels", testUserToManyRemoveOpChannels)
 	t.Run("UserToHubs", testUserToManyRemoveOpHubs)
 	t.Run("UserToCreatorHubs", testUserToManyRemoveOpCreatorHubs)
-	t.Run("UserToMessages", testUserToManyRemoveOpMessages)
 }
 
 func TestReload(t *testing.T) {

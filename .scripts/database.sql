@@ -1,4 +1,5 @@
 -- DROP old ones :))
+DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS channel_users;
 DROP TABLE IF EXISTS hub_users;
 DROP TABLE IF EXISTS hub_permissions;
@@ -62,10 +63,9 @@ CREATE TABLE IF NOT EXISTS channel_permissions (
 
 CREATE TABLE IF NOT EXISTS messages(
     id varchar(255) primary key,
-    user_id varchar(255) REFERENCES users(id),
-    channel_id varchar(255) REFERENCES channels(id),
-    hub_id varchar(255) REFERENCES hubs(id),
-    payload varchar(255)
+    user_id varchar(255) REFERENCES users(id) NOT NULL,
+    channel_id varchar(255) REFERENCES channels(id) NOT NULL,
+    payload varchar(255) NOT NULL
 );
 
 
