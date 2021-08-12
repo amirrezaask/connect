@@ -7,6 +7,7 @@ import (
 )
 
 var C *config.Config
+
 func getEnv(key string, fallback string) string {
 	v := os.Getenv(key)
 	if v == "" {

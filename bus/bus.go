@@ -1,26 +1,27 @@
-package main
+package bus
 
 import (
 	"log"
 
+	"github.com/amirrezaask/connect/domain"
 	"go.uber.org/zap"
 )
 
 type Bus interface {
-	Emit(e *Event) error
+	Emit(e *domain.Event) error
 	// registering handlers should also be in the interface
-	Register(t EventType, handler func(e *Event) error)
+	Register(t domain.EventType, handler func(e *domain.Event) error)
 }
 
 type ChannelBus struct {
-	c      chan *Event
+	c      chan *domain.Event
 	Logger *zap.SugaredLogger
 	// maps event_types to their respective handlers
-	handlers map[EventType]func(e *Event) error
+	handlers map[domain.EventType]func(e *domain.Event) error
 }
 
 func NewChannelBus() *ChannelBus {
-	c := make(chan *Event)
+	c := make(chan *domain.Event)
 	l, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatal(err)
@@ -28,16 +29,16 @@ func NewChannelBus() *ChannelBus {
 	return &ChannelBus{
 		c:        c,
 		Logger:   l.Sugar(),
-		handlers: map[EventType]func(e *Event) error{},
+		handlers: map[domain.EventType]func(e *domain.Event) error{},
 	}
 }
 
-func (c *ChannelBus) Emit(e *Event) error {
+func (c *ChannelBus) Emit(e *domain.Event) error {
 	c.c <- e
 	return nil
 }
 
-func (c *ChannelBus) Register(t EventType, handler func(e *Event) error) {
+func (c *ChannelBus) Register(t domain.EventType, handler func(e *domain.Event) error) {
 	c.handlers[t] = handler
 	go func() {
 		for {

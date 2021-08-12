@@ -11,3 +11,25 @@ A chat application with (hopefully)
 
 # Architecture
 All WebSocket events that are received in the server are emitted into the Bus ( can be Go channels, NATS, ... ) and then from there the registered handler for the given event type will handle the event.
+Connect is a Chat application written in [Go](https://golang.org) as my project for [#100DaysOfCode](https://www.100daysofcode.com) challenge.
+# Terminology
+TBA
+# Architecture
+TBA
+# Deployment
+TBA
+# Scaling
+TBA
+# Clients
+TBA
+
+# Building
+TBA
+
+# Testing
+## Integration
+For integration testing:
+```bash
+# You should have docker and docker-compose installed
+.scripts/test_integration.sh
+```

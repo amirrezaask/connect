@@ -1,86 +1,70 @@
 package main
 
 import (
-	"encoding/json"
+	"database/sql"
 	"log"
 	"net/http"
-	"strings"
 
-	"github.com/gorilla/websocket"
+	"github.com/amirrezaask/connect/auth"
+	"github.com/amirrezaask/connect/bus"
+	"github.com/amirrezaask/connect/domain"
+	"github.com/amirrezaask/connect/handlers"
+	"github.com/labstack/echo/v4"
+
 	"go.uber.org/zap"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+func setupAPIServer(db *sql.DB) http.Handler {
+	e := echo.New()
+	authenticator := &auth.JWTAuthenticator{Secret: "SecretKey"}
+
+	hubHandler := handlers.HubHandler{DB: db}
+	channelHandler := handlers.ChannelHandler{DB: db}
+
+	e.Use(authenticator.EchoMiddleware())
+
+	e.POST("/hub", hubHandler.CreateHub)
+	e.POST("/hub_users", hubHandler.AddUserToHub)
+	e.POST("/channel", channelHandler.CreateChannel)
+
+	return e.Server.Handler
 }
 
-func (s *ConnectServer) WSHandler(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		s.Logger.Errorf("error in upgrading user connection to ws protocol: %v", err)
-		return
-	}
-	nickName := r.URL.Query().Get("nickname")
-	if nickName == "" {
-		s.Logger.Error("user has not send a nickname")
-		return
-	}
-	s.Logger.Debugf("%s connected", nickName)
-	s.Users.Add(nickName, conn)
-	go func(c *websocket.Conn, nickName string) {
-		for {
-			e := &Event{}
-			err = c.ReadJSON(e)
-			if err != nil {
-				//TODO(amirreza): please fix this:))
-				if !strings.Contains(err.Error(), "EOF")  {
-					s.Logger.Errorf("error in reading event from client: %v", err)
-				}
-				continue
-			}
-			e.Creator = nickName
-			s.Logger.Debugf("received from %s: %+v", nickName, e)
-			s.Bus.Emit(e)
-		}
-	}(conn, nickName)
-	conn.WriteMessage(websocket.TextMessage, []byte("Connected"))
+func setupWSServer(h *handlers.WSHandler) http.Handler {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", h.WSHandler)
+	return mux
 }
 
-func main() {
+func regiterServers() {
 	l, _ := zap.NewDevelopment()
 	logger := l.Sugar()
 
-	c := &ConnectServer{
-		Users:  make(UserConnections),
+	b := bus.NewChannelBus()
+	uc := handlers.UserConnections{}
+
+	// FIX
+	db := &sql.DB{}
+	WSHandler := &handlers.WSHandler{
+		Users:  uc,
 		Logger: logger,
+		Bus:    b,
+		DB:     db,
 	}
 
-	b := NewChannelBus()
-	b.Register(EventType_NewMessage, newMessageHandler(c))
-	c.Bus = b
+	WSServer := setupWSServer(WSHandler)
+	apiServer := setupAPIServer(db)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/ws", c.WSHandler)
-
-	err := http.ListenAndServe(":8080", mux)
-	if err != nil {
-		log.Fatalf("%s", err)
-	}
+	b.Register(domain.EventType_NewMessage, WSHandler.NewMessageEventHandler())
+	http.Handle("/ws", WSServer)
+	http.Handle("/api", apiServer)
 }
 
-func newMessageHandler(c *ConnectServer) func(e *Event) error {
-	return func(e *Event) error {
-		if e.EventType == EventType_NewMessage {
-			p := &NewMessagePayload{}
-			err := json.Unmarshal(e.Payload, p)
-			if err != nil {
-				c.Logger.Errorf("error in unmarshaling new message payload: %v", err)
-				return nil
-			}
-			c.Users.Get(p.Receiver).WriteJSON(e)
-		}
-		return nil
+func main() {
+	regiterServers()
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		log.Fatalf("%s", err)
 	}
 }
