@@ -12,10 +12,10 @@ const (
 type Event struct {
 	Creator   string
 	EventType EventType `json:"event_type"`
-	ChannelID string    `json:"channel_id"`
 	Payload   []byte    `json:"payload"`
 }
 
 type NewMessagePayload struct {
-	Body string `json:"body"`
+	ChannelID string `json:"channel_id"`
+	Body      string `json:"body"`
 }

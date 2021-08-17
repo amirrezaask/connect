@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"go.uber.org/zap"
 )
 
@@ -77,7 +78,7 @@ func (s *WSHandler) WSHandler(w http.ResponseWriter, r *http.Request) {
 				if !strings.Contains(err.Error(), "EOF") {
 					s.Logger.Errorf("error in reading event from client: %v", err)
 				}
-				continue
+				break
 			}
 			e.Creator = nickName
 			s.Logger.Debugf("received from %s: %+v", nickName, e)
@@ -97,14 +98,14 @@ func (c *WSHandler) NewMessageEventHandler() func(e *domain.Event) error {
 				return err
 			}
 			rm := auth.RoleManager{DB: c.DB}
-			has, err := rm.HasRoleInChannel(e.Creator, e.ChannelID, auth.ROLE_CHANNEL_WRITE)
+			has, err := rm.HasRoleInChannel(e.Creator, p.ChannelID, auth.ROLE_CHANNEL_WRITE)
 			if err != nil {
 				c.Logger.Error(err)
 				return err
 			}
 			if !has {
-				c.Logger.Debugf("user %s has no write permission in %s channel", e.Creator, e.ChannelID)
-				return auth.Unauthorized(e.Creator, e.ChannelID)
+				c.Logger.Debugf("user %s has no write permission in %s channel", e.Creator, p.ChannelID)
+				return auth.Unauthorized(e.Creator, p.ChannelID)
 			}
 			// save message into database
 			go func(db *sql.DB, logger *zap.SugaredLogger) {
@@ -116,17 +117,24 @@ func (c *WSHandler) NewMessageEventHandler() func(e *domain.Event) error {
 				(&models.Message{
 					ID:        id,
 					UserID:    e.Creator,
-					ChannelID: e.ChannelID,
+					ChannelID: p.ChannelID,
 					Payload:   string(e.Payload),
 				}).Insert(context.Background(), db, boil.Infer())
 			}(c.DB, c.Logger)
 
-			channel, err := models.Channels(models.ChannelWhere.ID.EQ(e.ChannelID)).One(context.TODO(), c.DB)
+			channel, err := models.Channels(models.ChannelWhere.ID.EQ(p.ChannelID),
+				qm.Load(models.ChannelRels.Users),
+			).One(context.TODO(), c.DB)
 			if err != nil {
 				return err
 			}
 			for _, u := range channel.R.Users {
-				if err := c.Users.Get(u.ID).WriteJSON(e); err != nil {
+				userC := c.Users.Get(u.ID)
+				if userC == nil {
+					c.Logger.Errorf("error, user has no active connection: %s", u.ID)
+					continue
+				}
+				if err := userC.WriteJSON(e); err != nil {
 					c.Logger.Errorf("error in pushing message to user: %v", err)
 					continue
 				}

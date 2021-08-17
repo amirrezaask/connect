@@ -9,6 +9,7 @@ import (
 	"github.com/amirrezaask/connect/bus"
 	"github.com/amirrezaask/connect/domain"
 	"github.com/amirrezaask/connect/handlers"
+	"github.com/amirrezaask/connect/testutils"
 	"github.com/labstack/echo/v4"
 
 	"go.uber.org/zap"
@@ -45,7 +46,10 @@ func regiterServers() {
 	uc := handlers.UserConnections{}
 
 	// FIX
-	db := &sql.DB{}
+	db, err := testutils.GetDB()
+	if err != nil {
+		panic(err)
+	}
 	WSHandler := &handlers.WSHandler{
 		Users:  uc,
 		Logger: logger,
