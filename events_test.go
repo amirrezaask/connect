@@ -86,7 +86,6 @@ func TestPerson2PersonMessage(t *testing.T) {
 		assert.NoError(t, testutils.RemoveUser(db, "user2"))
 
 	}
-	_ = clean
 	defer clean(db)
 	regiterServers()
 	// Create test server with the echo handler.
@@ -98,23 +97,18 @@ func TestPerson2PersonMessage(t *testing.T) {
 
 	// first client
 	ws1, _, err := websocket.DefaultDialer.Dial(u+"/ws?id=user1&token=something", nil)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+	assert.NoError(t, err)
+
 	defer ws1.Close()
-	if !isConnected(ws1) {
-		t.Fatalf("connection is not ok for ws1 since we can't read connected message from stream")
-	}
+	assert.True(t, isConnected(ws1))
 
 	// second client
 	ws2, _, err := websocket.DefaultDialer.Dial(u+"/ws?id=user2&token=something", nil)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
+	assert.NoError(t, err)
+
 	defer ws2.Close()
-	if !isConnected(ws2) {
-		t.Fatalf("connection is not ok for ws2 since we can't read connected message from stream")
-	}
+	assert.True(t, isConnected(ws2))
+
 	bs, _ := json.Marshal(domain.NewMessagePayload{
 		Body:      "salam",
 		ChannelID: "channelid",
@@ -123,24 +117,16 @@ func TestPerson2PersonMessage(t *testing.T) {
 		EventType: domain.EventType_NewMessage,
 		Payload:   bs,
 	})
-	if err != nil {
-		t.Fatalf("cannot write salam message: %v", err)
-	}
+	assert.NoError(t, err)
+
 	e := &domain.Event{}
 	err = ws2.ReadJSON(e)
-	if err != nil {
-		t.Fatalf("cannot read salam message: %v", err)
-	}
-	t.Logf("%+v", e)
-	if len(e.Payload) == 0 {
-		t.Fatal("cannot read salam message payload")
-	}
+	assert.NoError(t, err)
+
+	assert.NotEmpty(t, e.Payload)
+
 	p := &domain.NewMessagePayload{}
 	err = json.Unmarshal(e.Payload, p)
-	if err != nil {
-		t.Fatalf("cannot read salam message payload: %v", err)
-	}
-	if p.Body != "salam" {
-		t.Fatalf("message is not salam")
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, "salam", p.Body)
 }
