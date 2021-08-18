@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -38,6 +39,20 @@ func setupWSServer(h *handlers.EventsHandler) http.Handler {
 	return mux
 }
 
+func getDB() (*sql.DB, error) {
+	username, err := C.GetString("database.username")
+	password, err := C.GetString("database.password")
+	host, err := C.GetString("database.host")
+	port, err := C.GetString("database.port")
+	dbName, err := C.GetString("database.name")
+	sslMode, err := C.GetString("database.sslmode")
+	if err != nil {
+		panic(err)
+	}
+
+	return sql.Open("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s", username, password, host, port, dbName, sslMode))
+
+}
 func regiterServers() {
 	l, _ := zap.NewDevelopment()
 	logger := l.Sugar()

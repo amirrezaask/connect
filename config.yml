@@ -1,0 +1,7 @@
+database:
+  username: "connect"
+  password: "connect"
+  host: "127.0.0.1"
+  port: "5432"
+  name: "connect"
+  sslmode: "disable"
