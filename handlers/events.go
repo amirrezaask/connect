@@ -24,7 +24,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
-type WSHandler struct {
+type EventsHandler struct {
 	Users  UserConnections
 	Logger *zap.SugaredLogger
 	Bus    bus.Bus
@@ -41,7 +41,7 @@ func (uc UserConnections) Get(id string) *websocket.Conn {
 	return uc[id]
 }
 
-func (s *WSHandler) WSHandler(w http.ResponseWriter, r *http.Request) {
+func (s *EventsHandler) WSHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.Logger.Errorf("error in upgrading user connection to ws protocol: %v", err)
@@ -88,7 +88,7 @@ func (s *WSHandler) WSHandler(w http.ResponseWriter, r *http.Request) {
 	conn.WriteMessage(websocket.TextMessage, []byte("Connected"))
 }
 
-func (c *WSHandler) NewMessageEventHandler() func(e *domain.Event) error {
+func (c *EventsHandler) NewMessageEventHandler() func(e *domain.Event) error {
 	return func(e *domain.Event) error {
 		if e.EventType == domain.EventType_NewMessage {
 			p := &domain.NewMessagePayload{}

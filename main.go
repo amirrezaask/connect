@@ -31,7 +31,7 @@ func setupAPIServer(db *sql.DB) http.Handler {
 	return e.Server.Handler
 }
 
-func setupWSServer(h *handlers.WSHandler) http.Handler {
+func setupWSServer(h *handlers.EventsHandler) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", h.WSHandler)
@@ -50,7 +50,7 @@ func regiterServers() {
 	if err != nil {
 		panic(err)
 	}
-	WSHandler := &handlers.WSHandler{
+	WSHandler := &handlers.EventsHandler{
 		Users:  uc,
 		Logger: logger,
 		Bus:    b,
