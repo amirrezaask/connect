@@ -47,33 +47,37 @@ func TestPerson2PersonMessage(t *testing.T) {
 
 		count1, err := testutils.RemoveRoleForUserInChannel(db, "user1", "channelid", auth.ROLE_CHANNEL_WRITE)
 		assert.NoError(t, err)
-		assert.Equal(t, 1, count1)
+		assert.Equal(t, int64(1), count1)
 
-		count2, err := testutils.RemoveRoleForUserInChannel(db, "user1", "channelid", auth.ROLE_CHANNEL_WRITE)
+		count2, err := testutils.RemoveRoleForUserInChannel(db, "user2", "channelid", auth.ROLE_CHANNEL_WRITE)
 		assert.NoError(t, err)
-		assert.Equal(t, 1, count2)
+		assert.Equal(t, int64(1), count2)
 
 		count1 = 0
 		count2 = 0
 
 		count1, err = testutils.RemoveUserFromChannel(db, "user1", "channelid")
 		assert.NoError(t, err)
-		assert.Equal(t, 1, count1)
+		assert.Equal(t, int64(1), count1)
 
 		count2, err = testutils.RemoveUserFromChannel(db, "user2", "channelid")
 		assert.NoError(t, err)
-		assert.Equal(t, 1, count2)
+		assert.Equal(t, int64(1), count2)
 
 		count1 = 0
 		count2 = 0
 
 		count1, err = testutils.RemoveUserFromHub(db, "user1", "hubid")
 		assert.NoError(t, err)
-		assert.Equal(t, 1, count1)
+		assert.Equal(t, int64(1), count1)
 
 		count2, err = testutils.RemoveUserFromHub(db, "user2", "hubid")
 		assert.NoError(t, err)
-		assert.Equal(t, 1, count2)
+		assert.Equal(t, int64(1), count2)
+
+		countMessage, err := testutils.RemoveMessage(db, "user1", "channelid")
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), countMessage)
 
 		assert.NoError(t, testutils.RemoveChannel(db, "channelid"))
 		assert.NoError(t, testutils.RemoveHub(db, "hubid"))
@@ -82,6 +86,7 @@ func TestPerson2PersonMessage(t *testing.T) {
 		assert.NoError(t, testutils.RemoveUser(db, "user2"))
 
 	}
+	_ = clean
 	defer clean(db)
 	regiterServers()
 	// Create test server with the echo handler.

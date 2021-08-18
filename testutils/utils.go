@@ -98,3 +98,11 @@ func RemoveUserFromHub(db *sql.DB, userID string, hubID string) (int64, error) {
 	}
 	return res.RowsAffected()
 }
+
+func RemoveMessage(db *sql.DB, creatorID string, channelID string) (int64, error) {
+	res, err := db.Exec(`DELETE FROM messages WHERE user_id=$1 AND channel_id=$2`, creatorID, channelID)
+	if err != nil {
+		return -1, err
+	}
+	return res.RowsAffected()
+}
