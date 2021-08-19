@@ -143,3 +143,8 @@ func (c *EventsHandler) NewMessageEventHandler() func(e *domain.Event) error {
 		return nil
 	}
 }
+
+func (c *EventsHandler) NotifEventHandler() func(e *domain.Event) error {
+	return func(e *domain.Event) error {
+	}
+}
