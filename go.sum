@@ -51,8 +51,16 @@ github.com/golang/groupcache v0.0.0-20190129154638-5b532d6fd5ef/go.mod h1:cIg4er
 github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.1/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
+github.com/golobby/cast v1.1.4 h1:AJ5mNMUOnbha2XWpQIPwnAcahBRB3/ENugWsDM69VgU=
+github.com/golobby/cast v1.1.4/go.mod h1:WCusT3z1fzp4XVBUGbWy61insoQS8CPJHNTQwlW8qnM=
 github.com/golobby/config/v2 v2.1.4 h1:rM6i3YUfewM66ltO7fXQlrkIbvZzlt/OzoTZIYuM8bU=
 github.com/golobby/config/v2 v2.1.4/go.mod h1:xBB/n7CA3oNFHe0elykwiDC8mg/+DpbG1IatetZahJA=
+github.com/golobby/config/v3 v3.0.1 h1:sqQNrtBneI5+23/rJGmh6BF1o1cXwIJaJu4/wUWiDtI=
+github.com/golobby/config/v3 v3.0.1/go.mod h1:t1YKmrQgz5LlZLjQy6z0QD/evDTEPVr/UiJyVR6CVMY=
+github.com/golobby/dotenv v1.2.0 h1:kDA2zKOf9byk040lju6hcm7ma5KRPvPCiSZiSgeVcys=
+github.com/golobby/dotenv v1.2.0/go.mod h1:iEIqJeTeQQ8BwujHnTCGf4mO21OKObYFe6MsHs9fIPM=
+github.com/golobby/env/v2 v2.1.0 h1:szUrj5lC+WsnAEbcBzWXyRE0O3fOAI2lgI0SRwtQI9Q=
+github.com/golobby/env/v2 v2.1.0/go.mod h1:UM4kv1vShjJQcC54Au2GZsQ8fauFygf+BOJpCcgy1W8=
 github.com/google/btree v1.0.0/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
 github.com/google/go-cmp v0.2.0/go.mod h1:oXzfMopK8JAjlY9xF4vHSVASa0yLyX7SntLO5aqRK0M=
 github.com/google/gofuzz v1.0.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/M65Eg=

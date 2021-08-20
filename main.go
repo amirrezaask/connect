@@ -8,6 +8,7 @@ import (
 
 	"github.com/amirrezaask/connect/auth"
 	"github.com/amirrezaask/connect/bus"
+	"github.com/amirrezaask/connect/config"
 	"github.com/amirrezaask/connect/domain"
 	"github.com/amirrezaask/connect/handlers"
 	"github.com/amirrezaask/connect/testutils"
@@ -40,18 +41,7 @@ func setupWSServer(h *handlers.EventsHandler) http.Handler {
 }
 
 func getDB() (*sql.DB, error) {
-	username, err := C.GetString("database.username")
-	password, err := C.GetString("database.password")
-	host, err := C.GetString("database.host")
-	port, err := C.GetString("database.port")
-	dbName, err := C.GetString("database.name")
-	sslMode, err := C.GetString("database.sslmode")
-	if err != nil {
-		panic(err)
-	}
-
-	return sql.Open("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s", username, password, host, port, dbName, sslMode))
-
+	return sql.Open("postgres", fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s", config.Config.Database.Username, config.Config.Database.Password, config.Config.Database.Host, config.Config.Database.Port, config.Config.Database.Name, config.Config.Database.SSLMode))
 }
 func regiterServers() {
 	l, _ := zap.NewDevelopment()
