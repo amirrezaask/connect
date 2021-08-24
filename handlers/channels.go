@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"log"
 
 	"github.com/amirrezaask/connect/domain"
 	"github.com/amirrezaask/connect/models"
@@ -54,12 +55,15 @@ func (c *ChannelHandler) RemoveChannel(ctx echo.Context) error {
 	if err != nil {
 		return ClientErr(ctx, err)
 	}
-	_, err = models.Channels(models.ChannelWhere.ID.EQ(h.ID)).DeleteAll(ctx.Request().Context(), c.DB)
-	if err != nil {
-		return ServerErr(ctx, err)
-	}
 	channel, err := models.Channels(models.ChannelWhere.ID.EQ(h.ID), qm.Load(qm.Rels(models.ChannelRels.Hub, models.HubRels.Users))).One(ctx.Request().Context(), c.DB)
 	if err != nil {
+		log.Println(err)
+		return ServerErr(ctx, err)
+	}
+	_, err = models.Channels(models.ChannelWhere.ID.EQ(h.ID)).DeleteAll(ctx.Request().Context(), c.DB)
+	if err != nil {
+
+		log.Println(err)
 		return ServerErr(ctx, err)
 	}
 	for _, u := range channel.R.Users {

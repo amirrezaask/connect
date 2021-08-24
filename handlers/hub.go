@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log"
 
 	"github.com/amirrezaask/connect/domain"
 	"github.com/amirrezaask/connect/models"
+	"github.com/golobby/sql/builder"
 	"github.com/labstack/echo/v4"
-	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"go.uber.org/zap"
 )
@@ -18,22 +20,44 @@ type HubHandler struct {
 	Users  UserConnections
 	Logger *zap.SugaredLogger
 }
+type Hub struct {
+	ID      string  `bind:"id" json:"id" toml:"id" yaml:"id"`
+	Name    *string `bind:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	Creator *string `bind:"creator" json:"creator,omitempty" toml:"creator" yaml:"creator,omitempty"`
+}
+
+func valueOrEmptyString(s *string) string {
+	if s != nil {
+		return *s
+	}
+	return ""
+}
+
+var hubsMeta = builder.ObjectMetadataFrom(&Hub{})
 
 func (c *HubHandler) CreateHub(ctx echo.Context) error {
-	h := &models.Hub{}
+	h := &Hub{}
 	err := ctx.Bind(h)
 	if err != nil {
 		return ClientErr(ctx, err)
 	}
-	err = h.Insert(context.TODO(), c.DB, boil.Infer())
+
+	_, err = builder.
+		NewInsert(hubsMeta.Table).
+		Into(hubsMeta.Columns...).
+		Values(h.ID, h.Name, h.Creator).
+		ExecContext(ctx.Request().Context(), c.DB)
+
 	if err != nil {
+		log.Printf("error in creating hub: %v", err)
 		return ServerErr(ctx, err)
 	}
-	creatorCon := c.Users.Get(h.Creator.String)
+
+	creatorCon := c.Users.Get(valueOrEmptyString(h.Creator))
 	if creatorCon != nil {
 		payload, _ := json.Marshal(domain.HubCreatedPayload{HubID: h.ID})
 		err = creatorCon.WriteJSON(&domain.Event{
-			Creator:   h.Creator.String,
+			Creator:   valueOrEmptyString(h.Creator),
 			EventType: domain.EventType_HubCreated,
 			Payload:   []byte(payload),
 		})
@@ -42,6 +66,20 @@ func (c *HubHandler) CreateHub(ctx echo.Context) error {
 		}
 	}
 	return OK(ctx, h)
+}
+
+func (c *HubHandler) GetHub(ctx echo.Context) error {
+	id := ctx.Param("id")
+	if id == "" {
+		return ClientErr(ctx, fmt.Errorf("no id parameter"))
+	}
+	hub := &Hub{}
+	err := builder.NewQuery().Table(hubsMeta.Table).Where(builder.WhereHelpers.EqualID("$1")).Query().BindContext(ctx.Request().Context(), c.DB, hub, id)
+	if err != nil {
+		return ServerErr(ctx, err)
+	}
+
+	return OK(ctx, hub)
 }
 
 func (c *HubHandler) AddUserToHub(ctx echo.Context) error {
